@@ -1,4 +1,6 @@
 import * as T from "./assets/three/three.module.min.js";
+import { blueBoat } from "./blueboat.js";
+import { carbonFiber, concrete, lightLab, material, softShadow, wood } from "./lab-materials.js";
 
 export { T };
 export const trail = [
@@ -7,10 +9,10 @@ export const trail = [
 ];
 
 const stops = [
-  { point: 3, facing: 0, marker: [-7.35, 3.82, -7] },
-  { point: 5, facing: Math.PI / 2, marker: [-7, 3.3, .25] },
-  { point: 7, facing: -Math.PI / 2, marker: [6.4, 3.37, -4.35] },
-  { point: 8, facing: -Math.PI / 2, marker: [6.8, 2.9, 1.8] }
+  { point: 3, facing: 0, marker: [-7.35, 3.82, -7], focus: [-7.1, 2.63, -7], view: [.2, .6, 9.5] },
+  { point: 5, facing: Math.PI / 2, marker: [-7, 3.3, .25], focus: [-6.86, 1.65, .87], view: [2.65, 2.05, 3.2] },
+  { point: 7, facing: -Math.PI / 2, marker: [6.4, 3.37, -4.35], focus: [6.23, 1.49, -4.42], view: [2.3, 2.7, 4.1] },
+  { point: 8, facing: -Math.PI / 2, marker: [6.8, 2.9, 1.8], focus: [6.95, .57, 1.93], view: [2.6, 3.2, 5.25] }
 ];
 const roomWidth = 22;
 const roomDepth = 15;
@@ -24,6 +26,9 @@ const materials = new Map();
 const boxGeometry = new T.BoxGeometry();
 const cylinderGeometry = new T.CylinderGeometry(.5, .5, 1, 20);
 const sphereGeometry = new T.SphereGeometry(1, 12, 9);
+const brushedMetal = material(0x919a9f, .38, .73);
+const darkMetal = material(0x252c33, .43, .58);
+const glass = new T.MeshPhysicalMaterial({ color: 0x23394c, roughness: .15, clearcoat: .78 });
 
 const obstacles = [
   [-9.3, -4.9, -6.9, -5.6],  // Whiteboard cabinet
@@ -89,10 +94,12 @@ export function routeTo(from, to) {
 }
 
 function mesh(parent, geometry, color, x, y, z, sx, sy, sz) {
-  if (!materials.has(color)) materials.set(color, new T.MeshStandardMaterial({ color, roughness: .83 }));
-  const part = new T.Mesh(geometry, materials.get(color));
+  if (typeof color === "number" && !materials.has(color)) materials.set(color, material(color));
+  const part = new T.Mesh(geometry, materials.get(color) ?? color);
   part.position.set(x, y, z);
   part.scale.set(sx, sy, sz);
+  part.castShadow = y >= .08;
+  part.receiveShadow = true;
   parent.add(part);
   return part;
 }
@@ -173,6 +180,9 @@ function whiteboard(scene) {
   box(scene, teal, -6.14, 1.349, -6.99, .36, .06, .06).rotation.y = -.13;
   box(scene, rust, -6.6, 1.349, -6.99, .31, .06, .05);
   cabinet(scene, -7.1, -6.35, 4.33, .81, 1.05, 0x688b91);
+  const closedNotebook = box(scene, 0x465b75, -8.36, .964, -6.33, .55, .088, .68);
+  closedNotebook.rotation.y = .18;
+  box(scene, cream, -8.35, .964, -6.001, .49, .048, .01).rotation.y = .18;
 }
 
 function cabinet(scene, x, z, w, h, d, color) {
@@ -185,9 +195,10 @@ function cabinet(scene, x, z, w, h, d, color) {
   }
 }
 
-function workbench(scene, x, z, w, d, tag, color) {
+function workbench(scene, x, z, w, d, tag, color, worktop) {
   const bench = group(scene, x, 0, z);
-  box(bench, 0xc6aa83, 0, 1.075, 0, w, .17, d);
+  box(bench, worktop, 0, 1.075, 0, w, .17, d);
+  box(bench, 0x918571, 0, 1.027, d / 2 + .001, w, .019, .013);
   box(bench, ink, 0, .39, 0, w - .18, .11, d - .18);
   box(bench, color, 0, .89, 0, w - .14, .19, d - .08);
   for (const dx of [-w / 2 + .16, w / 2 - .16]) {
@@ -202,40 +213,28 @@ function crate(parent, color, x, y, z, w, h, d) {
   box(parent, ink, x, y + h * .75, z + d / 2 + .005, w * .35, .05, .015);
 }
 
-function boat(scene) {
-  const vessel = group(scene, -6.86, 1.21, .87);
-  vessel.rotation.y = Math.PI / 2;
-  const hull = new T.Shape();
-  hull.moveTo(-.62, 1.63);
-  hull.lineTo(-.68, -.76);
-  hull.quadraticCurveTo(-.52, -1.45, 0, -1.91);
-  hull.quadraticCurveTo(.52, -1.45, .68, -.76);
-  hull.lineTo(.62, 1.63);
-  hull.closePath();
-  const geometry = new T.ExtrudeGeometry(hull, { depth: .28, bevelEnabled: true, bevelSize: .09, bevelThickness: .06, bevelSegments: 1 });
-  geometry.rotateX(Math.PI / 2);
-  mesh(vessel, geometry, 0xf0e1bc, 0, .44, 0, 1, 1, 1);
-  box(vessel, ink, 0, .055, .92, 1.22, .11, .18);
-  box(vessel, ink, 0, .055, -.82, 1.22, .11, .18);
-  box(vessel, 0x396f88, 0, .51, -.12, .89, .23, 1.21);
-  box(vessel, 0x9cc8ce, 0, .55, -.74, .76, .12, .055);
-  box(vessel, rust, 0, .665, -.04, .81, .11, .99);
-  cylinder(vessel, ink, 0, .91, .14, .037, .4);
-  cylinder(vessel, cream, 0, 1.1, .14, .24, .08);
-  box(vessel, ink, -.31, .28, 1.7, .25, .26, .15);
-  box(vessel, ink, .31, .28, 1.7, .25, .26, .15);
-}
-
 function drone(scene) {
   const craft = group(scene, 6.23, 1.6, -4.42);
+  const carbon = carbonFiber();
+  const shell = new T.MeshPhysicalMaterial({ color: 0x4f626c, roughness: .38, clearcoat: .4 });
   craft.rotation.y = -.15;
-  box(craft, rust, 0, 0, 0, .87, .27, .64);
-  box(craft, cream, 0, .15, 0, .63, .08, .53);
-  box(craft, ink, 0, -.155, -.27, .32, .2, .2);
-  for (const angle of [-Math.PI / 4, Math.PI / 4]) box(craft, ink, 0, 0, 0, .105, .095, 2.65).rotation.y = angle;
+  round(craft, shell, 0, .052, -.042, .395, .147, .48);
+  box(craft, carbon, 0, -.035, 0, .79, .082, .74);
+  box(craft, rust, 0, .183, .072, .32, .02, .25);
+  box(craft, brushedMetal, 0, -.12, .29, .38, .12, .41);
+  round(craft, darkMetal, 0, -.157, -.414, .172, .113, .11);
+  const lens = cylinder(craft, glass, 0, -.156, -.511, .139, .041);
+  lens.rotation.x = Math.PI / 2;
+  for (const angle of [-Math.PI / 4, Math.PI / 4]) box(craft, carbon, 0, -.003, 0, .125, .085, 2.65).rotation.y = angle;
   for (const x of [-.9, .9]) for (const z of [-.9, .9]) {
-    cylinder(craft, ink, x, .07, z, .26, .2);
-    box(craft, z > 0 ? cream : blue, x, .19, z, .86, .044, .095).rotation.y = x * z * .6;
+    cylinder(craft, darkMetal, x, .07, z, .26, .18);
+    cylinder(craft, brushedMetal, x, .167, z, .171, .041);
+    for (const side of [-1, 1]) {
+      const blade = round(craft, z > 0 ? darkMetal : blue, x + side * .206, .207, z + side * .06, .253, .017, .047);
+      blade.rotation.y = -.282;
+      blade.rotation.z = side * .045;
+    }
+    cylinder(craft, brushedMetal, x, .229, z, .076, .048);
   }
   for (const x of [-.32, .32]) {
     box(craft, ink, x, -.23, 0, .08, .19, .36);
@@ -253,17 +252,23 @@ function mobileRobot(scene, x, z, color, angle, wide = false) {
   robot.rotation.y = angle;
   box(robot, ink, 0, .27, 0, 1.05, .24, 1.65);
   box(robot, color, 0, .45, 0, 1.05, .17, 1.58);
-  box(robot, 0x9cb3b1, 0, .66, .17, .68, .25, .68);
+  box(robot, brushedMetal, 0, .66, .17, .68, .25, .68);
   box(robot, ink, 0, .81, -.05, .08, .24, .075);
-  cylinder(robot, teal, 0, .96, -.05, .37, .14);
-  cylinder(robot, cream, 0, 1.045, -.05, .29, .035);
-  box(robot, 0xa1d4c6, 0, .43, -.799, .55, .09, .045);
+  cylinder(robot, darkMetal, 0, .96, -.05, .37, .14);
+  cylinder(robot, glass, 0, .985, -.05, .379, .05);
+  cylinder(robot, brushedMetal, 0, 1.045, -.05, .336, .035);
+  box(robot, glass, 0, .43, -.799, .55, .09, .045);
+  for (const x of [-.21, .21]) box(robot, 0xb3e7d3, x, .43, -.825, .068, .042, .01);
+  for (const z of [-.31, -.22, -.13, -.04, .05]) box(robot, ink, -.29, .792, z + .24, .215, .015, .023);
   for (const dx of [-.56, .56]) {
     for (const dz of [-.55, .56]) {
       cylinder(robot, ink, dx, .24, dz, .48, wide ? .28 : .2).rotation.z = Math.PI / 2;
-      cylinder(robot, 0x95a4a2, dx * 1.25, .24, dz, .22, .07).rotation.z = Math.PI / 2;
+      cylinder(robot, brushedMetal, dx * 1.25, .24, dz, .22, .07).rotation.z = Math.PI / 2;
     }
-    if (wide) box(robot, ink, dx, .22, 0, .29, .33, 1);
+    if (wide) {
+      box(robot, ink, dx, .22, 0, .29, .33, 1);
+      for (let segment = -5; segment <= 5; segment++) box(robot, darkMetal, dx, .39, segment * .103, .306, .035, .048);
+    }
   }
 }
 
@@ -317,9 +322,9 @@ function character(scene) {
 
 function room(scene) {
   box(scene, 0x8a9c98, 0, -.32, 0, 22.42, .64, 15.43);
-  box(scene, 0xc2caca, 0, -.022, 0, 22, .04, 15);
-  for (let x = -10; x <= 10; x += 2) box(scene, 0xa8b7b7, x, .006, 0, .015, .01, 15);
-  for (let z = -6; z <= 6; z += 2) box(scene, 0xa8b7b7, 0, .006, z, 22, .01, .015);
+  box(scene, concrete(), 0, -.022, 0, 22, .04, 15);
+  for (let x = -9; x <= 9; x += 3) box(scene, 0x888f90, x, .002, 0, .018, .005, 15);
+  for (let z = -6; z <= 6; z += 3) box(scene, 0x888f90, 0, .002, z, 22, .005, .018);
   box(scene, 0xd9e3df, 0, 2.3, -7.57, 22.36, 4.6, .28);
   box(scene, 0xb1c3be, -11.08, 2.3, 0, .28, 4.6, 15);
   box(scene, 0x657e82, 0, .22, -7.39, 22, .42, .08);
@@ -328,6 +333,14 @@ function room(scene) {
   box(scene, teal, -11.09, 4.47, 0, .34, .16, 15.14);
   box(scene, 0x859997, 11.02, .25, 0, .17, .5, 15.1);
   for (const x of [-6.82, 6.82]) box(scene, 0x859997, x, .25, 7.51, 8.47, .5, .18);
+
+  box(scene, 0x899997, 0, 4.1, -7.347, 21.8, .09, .13);
+  for (const x of [-9.9, -4.1, .7, 5.6, 9.9]) {
+    box(scene, 0xa8b2af, x, 4.09, -7.239, .14, .22, .19);
+  }
+  box(scene, 0x909e9c, -10.89, 3.5, 2.55, .12, .065, 9.5);
+  box(scene, 0x909e9c, -10.89, 2.04, 5.79, .12, 2.9, .07);
+  box(scene, 0x52676b, -10.88, .99, 5.79, .15, .28, .21);
 
   for (const x of [-.4, 3.5, 7.4]) {
     box(scene, ink, x, 2.91, -7.369, 3.43, 1.7, .09);
@@ -362,22 +375,26 @@ function room(scene) {
   crate(shelf, cream, .46, 2.17, -.15, .52, .49, .53);
 }
 
-export function buildWorld() {
+export function buildWorld(renderer) {
   const scene = new T.Scene();
   scene.background = new T.Color(0xcfdad4);
-  scene.add(new T.HemisphereLight(0xfff0da, 0x9aaeb4, 2.15));
-  const light = new T.DirectionalLight(0xffedce, 2.35);
-  light.position.set(-6, 14, 8);
-  scene.add(light);
+  scene.add(new T.HemisphereLight(0xe6edf7, 0xa7a599, 1.05));
+  lightLab(scene, renderer);
 
   room(scene);
   whiteboard(scene);
-  const boatBench = workbench(scene, -6.85, .875, 4.45, 2.65, "MARINE", 0x3c778c);
+  const worktop = wood();
+  const boatBench = workbench(scene, -6.85, .875, 4.45, 2.65, "BLUEBOAT", 0x3c778c, worktop);
   crate(boatBench, 0x739da3, -1.2, .47, .17, .94, .33, .71);
   crate(boatBench, cream, 1.16, .47, .13, .6, .32, .65);
-  boat(scene);
-  const flightBench = workbench(scene, 6.55, -4.32, 4.2, 2.85, "AERIAL", 0xb86652);
+  softShadow(scene, -6.86, .87, 3.8, 2.13, .67, 1.167);
+  blueBoat(scene);
+  const flightBench = workbench(scene, 6.55, -4.32, 4.2, 2.85, "AERIAL", 0xb86652, worktop);
   crate(flightBench, teal, 1.28, .47, .32, .9, .34, .73);
+  box(flightBench, darkMetal, 1.54, 1.19, -.78, .7, .064, .5);
+  box(flightBench, darkMetal, 1.54, 1.45, -.978, .7, .49, .047).rotation.x = -.16;
+  const laptopScreen = label(flightBench, "FLIGHT TEST", 1.54, 1.45, -.945, .62, .4, "#293f4f");
+  laptopScreen.rotation.x = -.16;
   drone(scene);
 
   box(scene, 0x557375, 6.95, .027, 1.93, 3.7, .048, 3.75);
@@ -387,14 +404,12 @@ export function buildWorld() {
   mobileRobot(scene, 7.82, 2.63, rust, -2.17, true);
   box(scene, cream, 8.24, .12, .61, .57, .17, .34);
 
+  for (const [x, z, w, d] of [[-6.8, .9, 5.7, 3.65], [6.5, -4.3, 5.6, 3.7], [-7.1, -6.35, 5.5, 1.7], [9.6, -6.5, 2.9, 2.2], [-10.1, 5.1, 2.2, 4.6]]) {
+    softShadow(scene, x, z, w, d, .56);
+  }
   const beacons = stops.map((stop) => ({ ...stop, position: new T.Vector3(...stop.marker) }));
   const { player, walk } = character(scene);
-  const shadow = new T.Mesh(
-    new T.CircleGeometry(.45, 28),
-    new T.MeshBasicMaterial({ color: 0x50626a, transparent: true, opacity: .25, depthWrite: false })
-  );
-  shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = .022;
-  scene.add(shadow);
+  player.traverse(part => { part.castShadow = false; });
+  const shadow = softShadow(scene, 0, 0, 1.4, 1.16, .72);
   return { scene, player, shadow, walk, beacons };
 }

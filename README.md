@@ -8,4 +8,6 @@ GitHub Pages serves the static files in the root of `main`.
 
 The 3D lab draws on [Bruno Simon’s explorable portfolio](https://bruno-simon.com/) and uses original models built from geometry. It uses a vendored copy of Three.js (r183), whose MIT license is in `assets/three/`. The handwritten OGP mark takes its cue from [Scott Yu-Jan’s site](https://syj-links.webflow.io/).
 
+The BlueBoat exhibit uses an original visual reconstruction based on [Blue Robotics’ product photos](https://bluerobotics.com/store/boat/blueboat/blueboat/) and [public BR-101447 drawing](https://bluerobotics.com/wp-content/uploads/2023/03/BR-101447_RevA_PUBLIC_DRAWING.pdf).
+
 The portrait and research figures come from the [C-Uniform project](https://ogpoyrazoglu.github.io/cuniform_sampling/), [C-Free-Uniform project](https://yukang-cao.github.io/C-Free-Uniform/), and the [Neural C-Uniform](https://arxiv.org/abs/2503.05819) and [C-Uniform](https://arxiv.org/abs/2409.12266) papers. Font licenses are in `assets/`.

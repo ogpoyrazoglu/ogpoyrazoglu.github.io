@@ -5,9 +5,9 @@ const exhibits = [
     link: ["See the C-Uniform project", "https://ogpoyrazoglu.github.io/cuniform_sampling/"]
   },
   {
-    title: "Autonomous boat", type: "Marine robotics",
-    text: "The boat on the bench represents an autonomous surface vessel. On the water it follows waypoints while accounting for wind, currents, and room to turn.",
-    link: ["Browse motion-planning research", "./#research"]
+    title: "BlueBoat", type: "Marine robotics",
+    text: "This model is based on Blue Robotics’ twin-hull BlueBoat. Its two propellers steer by pushing with different amounts of thrust.",
+    link: ["See the BlueBoat", "https://bluerobotics.com/store/boat/blueboat/blueboat/"]
   },
   {
     title: "Drone", type: "Aerial robotics",
@@ -35,11 +35,13 @@ const copy = document.querySelector("#exhibit-copy");
 const link = document.querySelector("#exhibit-link");
 const cameraButton = document.querySelector("#camera");
 const resetButton = document.querySelector("#reset");
+const inspectButton = document.querySelector("#inspect-exhibit");
 const pad = [...document.querySelectorAll("[data-direction]")];
 const stops = [...document.querySelectorAll("[data-stop]")];
 let current = -1;
 let walkToStop = () => {};
 let markers = [];
+let sceneReady = false;
 
 function showExhibit(index) {
   if (current === index) return;
@@ -50,6 +52,7 @@ function showExhibit(index) {
   copy.textContent = item.text;
   link.firstChild.textContent = item.link[0] + " ";
   link.href = item.link[1];
+  inspectButton.hidden = !sceneReady || index < 0;
   stops.forEach((button, i) => {
     for (const control of [button, markers[i]].filter(Boolean)) {
       if (i === index) control.setAttribute("aria-current", "location");
@@ -71,6 +74,7 @@ async function start() {
     const context = canvas.getContext("webgl2", { antialias: true });
     if (!context) throw new Error("WebGL 2 is unavailable");
     startLab(world, context);
+    sceneReady = true;
     status.hidden = true;
     for (const button of [cameraButton, resetButton, ...pad]) button.disabled = false;
   } catch (error) {
@@ -80,11 +84,15 @@ async function start() {
 }
 
 function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
-  const { scene, player, shadow, walk, beacons } = buildWorld();
   const renderer = new T.WebGLRenderer({ canvas, context, antialias: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
   renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.02;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = T.PCFShadowMap;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
+  const { scene, player, shadow, walk, beacons } = buildWorld(renderer);
   const camera = new T.PerspectiveCamera(39, 1, .1, 100);
   const cameraGoal = new T.Vector3();
   const gaze = new T.Vector3();
@@ -104,6 +112,7 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
   }
   const end = lengths.at(-1);
   let overview = true;
+  let inspecting = -1;
   let heading = 0;
   let progress = 0;
   let target = 0;
@@ -175,11 +184,13 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
   }
 
   walkToStop = (i) => {
+    stopInspecting();
     selectedStop = i;
     tourTo(lengths[beacons[i].point]);
   };
 
   function move(direction, key) {
+    stopInspecting();
     held.set(key, direction);
     touring = false;
     approach = [];
@@ -187,6 +198,10 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
   }
 
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && inspecting >= 0) {
+      stopInspecting();
+      return;
+    }
     if (event.altKey || event.ctrlKey || event.metaKey || ![canvas, document.body].includes(event.target)) return;
     const key = event.key.toLowerCase();
     if (!keyDirection[key] || interrupted) return;
@@ -206,6 +221,7 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     const destination = T.MathUtils.clamp(base + delta * scale * .05, 0, end);
     if (base === destination) return;
     event.preventDefault();
+    stopInspecting();
     selectedStop = -1;
     tourTo(destination);
   }, { passive: false });
@@ -229,12 +245,38 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     });
   }
 
+  function stopInspecting() {
+    if (inspecting < 0) return;
+    inspecting = -1;
+    inspectButton.setAttribute("aria-pressed", "false");
+    inspectButton.textContent = "Close-up view";
+    cameraButton.textContent = overview ? "Follow camera" : "Lab overview";
+  }
+
+  inspectButton.addEventListener("click", () => {
+    if (inspecting >= 0) {
+      stopInspecting();
+      return;
+    }
+    walkToStop(current);
+    inspecting = current;
+    inspectButton.setAttribute("aria-pressed", "true");
+    inspectButton.textContent = "Exit close-up";
+    cameraButton.textContent = "Exit close-up";
+    if (window.matchMedia("(max-width: 800px)").matches) frame.scrollIntoView({ block: "center" });
+  });
+
   cameraButton.addEventListener("click", () => {
+    if (inspecting >= 0) {
+      stopInspecting();
+      return;
+    }
     overview = !overview;
     cameraButton.setAttribute("aria-pressed", String(!overview));
     cameraButton.textContent = overview ? "Follow camera" : "Lab overview";
   });
   function reset() {
+    stopInspecting();
     held.clear();
     heading = 0;
     target = 0;
@@ -287,7 +329,12 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
   }
 
   function aimCamera(dt) {
-    if (overview) {
+    if (inspecting >= 0) {
+      const { focus, view } = beacons[inspecting];
+      const distance = Math.max(1, 1.17 / camera.aspect);
+      gazeGoal.set(...focus);
+      cameraGoal.set(focus[0] + view[0] * distance, focus[1] + view[1] * distance, focus[2] + view[2] * distance);
+    } else if (overview) {
       const distance = Math.max(1, 1.39 / camera.aspect);
       cameraGoal.set(9.2 * distance, 18.5 * distance, 24.7 * distance);
       gazeGoal.set(0, .8, -.2);
@@ -312,7 +359,7 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
       projection.project(camera);
       const left = (projection.x + 1) * w / 2;
       const top = (1 - projection.y) * h / 2;
-      const visible = projection.z > -1 && projection.z < 1 && left > 21 && left < w - 21 && top > 21 && top < h - 21;
+      const visible = inspecting < 0 && projection.z > -1 && projection.z < 1 && left > 21 && left < w - 21 && top > 21 && top < h - 21;
       markers[i].hidden = !visible;
       if (visible) markers[i].style.transform = `translate(${left - 22}px, ${top - 22}px)`;
     });
@@ -328,7 +375,7 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     });
     if (nearby >= 0 && (selectedStop < 0 || nearby === selectedStop)) showExhibit(nearby);
     const atStart = Math.hypot(player.position.x - trail[0][0], player.position.z - trail[0][1]) < 1.5;
-    const place = exhibits[nearby]?.title ?? (atStart ? "Lab entrance" : "Inside the lab");
+    const place = exhibits[inspecting]?.title ?? exhibits[nearby]?.title ?? (atStart ? "Lab entrance" : "Inside the lab");
     if (locationLabel.textContent !== place) locationLabel.textContent = place;
     player.rotation.y = heading;
     shadow.position.x = player.position.x;
@@ -347,6 +394,7 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     status.hidden = false;
   });
   canvas.addEventListener("webglcontextrestored", () => {
+    renderer.shadowMap.needsUpdate = true;
     interrupted = false;
     status.hidden = true;
   });
