@@ -11,23 +11,101 @@
   <link rel="canonical" href="https://ogpoyrazoglu.github.io/">
   <link rel="icon" href="assets/ogp.svg" type="image/svg+xml">
   <link rel="stylesheet" href="welcome.css">
-  <script>if (location.hash === "#research") location.replace("classic.html#research");</script>
+  <script>
+    if (location.hash === "#research") location.replace("classic.html#research");
+    document.documentElement.classList.add("js");
+  </script>
+  <script src="welcome.js" type="module"></script>
+  <script src="welcome-avatar.js" type="module"></script>
   <title>O. Goktug Poyrazoglu</title>
 </head>
-<body>
-  <main class="welcome">
-    <section class="intro" aria-labelledby="welcome-heading">
-      <a class="mark" href="./" aria-label="OGP home"><img src="assets/ogp-mark.svg" width="90" height="47" alt=""></a>
-      <h1 id="welcome-heading">Hi, I’m Goktug.</h1>
-      <p>I’m O. Goktug Poyrazoglu. I study how robots plan and move through the world.</p>
-      <nav aria-label="Choose a version of the website">
-        <a class="primary" href="world.html">Enter the robotics lab <span aria-hidden="true">↗</span></a>
-        <a class="secondary" href="classic.html">View the classic site <span aria-hidden="true">→</span></a>
-      </nav>
+<body data-side="center">
+  <div class="progress" aria-hidden="true"><span></span></div>
+  <header class="topbar">
+    <a class="mark" href="./" aria-label="OGP home"><img src="assets/ogp-mark.svg" width="72" height="38" alt=""></a>
+    <nav aria-label="Jump to a version of the site">
+      <a href="world.html">Robotics lab</a>
+      <a href="classic.html">Classic site</a>
+      <a href="blog.html">Blog</a>
+    </nav>
+  </header>
+
+  <!-- The avatar stays in the middle of the screen while the story scrolls past it. -->
+  <figure class="stage" data-state="loading">
+    <canvas class="avatar" role="img" aria-label="3D avatar of O. Goktug Poyrazoglu"></canvas>
+    <img class="portrait" src="assets/portrait.jpg" width="800" height="800" alt="O. Goktug Poyrazoglu">
+    <span class="avatar-loading" aria-hidden="true"></span>
+  </figure>
+
+  <main class="story">
+    <section class="scene scene-welcome" data-side="center" aria-label="Welcome">
+      <p class="welcome-word"><span>Welcome</span><span>.</span></p>
+      <p class="lede">Thanks for stopping by.</p>
+      <a class="scroll-cue" href="#hello"><span class="cue-line" aria-hidden="true"></span>Scroll</a>
     </section>
-    <figure class="portrait-stage">
-      <img class="portrait" src="assets/portrait.jpg" width="800" height="800" alt="O. Goktug Poyrazoglu">
-    </figure>
+
+    <section class="scene beat" id="hello" data-side="right">
+      <div class="beat-text">
+        <h1><span>I’m</span> Goktug Poyrazoglu.</h1>
+        <p>On my papers, I’m O. Goktug Poyrazoglu.</p>
+      </div>
+    </section>
+
+    <section class="scene beat" data-side="left" aria-labelledby="about-title">
+      <div class="beat-text">
+        <h2 id="about-title" class="eyebrow">About me</h2>
+        <p class="big">I’m a Ph.D. candidate in computer science at the <a href="https://www.cs.umn.edu/">University of Minnesota</a>, advised by <a href="https://rsn.cs.utexas.edu/people.html">Volkan Isler</a>.</p>
+      </div>
+    </section>
+
+    <section class="scene beat" data-side="right">
+      <div class="beat-text">
+        <p class="big">I study how robots find useful paths through cluttered spaces.</p>
+      </div>
+    </section>
+
+    <section class="scene beat" data-side="left">
+      <div class="beat-text">
+        <p class="big">My tools are trajectory sampling and model predictive control.</p>
+      </div>
+    </section>
+
+    <section class="scene beat work" data-side="right" aria-labelledby="work-title" hidden>
+      <div class="beat-text">
+        <h2 id="work-title" class="eyebrow">Selected work</h2>
+        <ol id="selected-work"></ol>
+      </div>
+    </section>
+
+    <section class="scene scene-doors" data-side="center" aria-labelledby="doors-title">
+      <h2 id="doors-title">Where to next?</h2>
+      <div class="doors">
+        <span class="choice-arrow choice-left" aria-hidden="true">←</span>
+        <span class="choice-arrow choice-right" aria-hidden="true">→</span>
+        <a class="door door-lab" href="world.html" data-look="left">
+          <img src="assets/door-lab.jpg" alt="" width="2030" height="1215" loading="lazy">
+          <span class="door-kicker">Interactive 3D</span>
+          <span class="door-title">Robotics lab</span>
+          <span class="door-copy">Walk around my lab: the publications whiteboard, the BlueBoat, the Skydio F10, the F1TENTH racer, the AlphaTruck, and my blog.</span>
+          <span class="door-go">Enter the lab <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="door door-classic" href="classic.html" data-look="right">
+          <img src="assets/door-classic.jpg" alt="" width="2160" height="1350" loading="lazy">
+          <span class="door-kicker">One page</span>
+          <span class="door-title">Classic website</span>
+          <span class="door-copy">Read my bio and selected publications, with links to papers, projects, and code.</span>
+          <span class="door-go">Open the classic site <span aria-hidden="true">→</span></span>
+        </a>
+      </div>
+    </section>
   </main>
+
+  <footer class="footer">
+    <img src="assets/ogp-mark.svg" width="56" height="30" alt="">
+    <span>O. Goktug Poyrazoglu</span>
+    <a href="blog.html">Blog</a>
+    <a href="https://github.com/ogpoyrazoglu">GitHub</a>
+    <a href="https://www.linkedin.com/in/ogpoyrazoglu/">LinkedIn</a>
+  </footer>
 </body>
 </html>

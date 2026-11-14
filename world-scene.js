@@ -1,24 +1,40 @@
 import * as T from "./assets/three/three.module.min.js";
+import { loadAvatar } from "./avatar.js";
+import { alphaTruck } from "./alphatruck.js";
 import { blueBoat } from "./blueboat.js";
 import { f1tenthRacer } from "./f1tenth.js";
 import { concrete, lightLab, material, softShadow, wood } from "./lab-materials.js";
 import { skydioF10 } from "./skydio-f10.js";
-import { publications } from "./publications.js";
+import { whiteboardPapers } from "./publications.js";
 
 export { T };
-export const trail = [
-  [0, 5.2], [-3.65, 4.3], [-3.65, -4.7], [-5.8, -4.7], [-3.65, -4.7],
-  [-3.65, .9], [0, -.65], [3.1, -3.9], [3.1, 2.05]
-];
+// The room and exhibits are modelled in lab units and drawn at this scale.
+// The trail, stops, and obstacles below are in lab units and scaled to world units here.
+// The walker is not scaled, so a smaller lab makes the avatar look bigger.
+const labScale = .85;
+const avatarHeight = 2.1;
+const toWorld = (points) => points.map((point) => point.map((value) => value * labScale));
 
+// Standing points. The first is the entrance; each stop below names the point where
+// the walker stands. Walking between them follows routeTo around the furniture.
+export const trail = toWorld([
+  [0, 4.3], [-1.6, -2.8], [-1.6, .6], [4.3, -3.5], [2.4, -.6], [2.4, 3.25], [-6.1, 3.0]
+]);
+
+// The whiteboard stop stands at the board's right end, turned toward it, so the walker
+// stays out of the close-up; that camera sits high enough to clear the boat.
+// The order matches the exhibits in world.js and the numbered markers.
 const stops = [
-  { point: 3, facing: 0, marker: [-7.35, 3.82, -7], focus: [-7.1, 2.63, -7], view: [.2, .6, 9.5] },
-  { point: 5, facing: Math.PI / 2, marker: [-7, 3.3, .25], focus: [-6.86, 1.65, .87], view: [2.65, 2.05, 3.2] },
-  { point: 7, facing: -Math.PI / 2, marker: [6.4, 3.37, -4.35], focus: [6.42, 1.47, -4.36], view: [1.9, 3.25, 2.9] },
-  { point: 8, facing: -Math.PI / 2, marker: [6.8, 2.9, 1.8], focus: [6.73, .44, 2.05], view: [1.52, 2.6, 3.05] }
-];
-const roomWidth = 22;
-const roomDepth = 15;
+  { point: 1, facing: .95, marker: [-5.15, 3.82, -5], focus: [-4.9, 2.63, -5], view: [.1, 1.1, 6] },
+  { point: 2, facing: Math.PI / 2, marker: [-5.25, 3.3, -.03], focus: [-5.11, 1.65, .6], view: [2.65, 2.05, 3.2] },
+  { point: 3, facing: 0, marker: [4.0, 4.0, -5], focus: [4.3, 2.45, -5.05], view: [1.0, 1.0, 5.6] },
+  { point: 4, facing: -Math.PI / 2, marker: [5.75, 1.55, -.15], focus: [5.68, .44, -.48], view: [1.52, 2.6, 3.05] },
+  { point: 5, facing: -Math.PI / 2, marker: [5.9, 2.1, 3.55], focus: [5.9, .75, 3.25], view: [-1.7, 2.6, 3.4] },
+  { point: 6, facing: 2, marker: [-7.6, 2.75, 3.75], focus: [-7.75, 1.8, 3.75], view: [3.0, .75, 1.6] }
+].map(({ marker, focus, view, ...stop }) => ({ ...stop, ...Object.fromEntries(
+  Object.entries({ marker, focus, view }).map(([key, value]) => [key, value.map((v) => v * labScale)])) }));
+const roomWidth = 17;
+const roomDepth = 11;
 const ink = 0x263943;
 const cream = 0xf1e4c9;
 const teal = 0x356d71;
@@ -31,18 +47,18 @@ const cylinderGeometry = new T.CylinderGeometry(.5, .5, 1, 20);
 const sphereGeometry = new T.SphereGeometry(1, 12, 9);
 const darkMetal = material(0x252c33, .43, .58);
 
-const obstacles = [
-  [-9.3, -4.9, -6.9, -5.6],  // Whiteboard cabinet
-  [-9.1, -4.6, -.45, 2.2],  // Boat bench
-  [4.4, 8.7, -5.75, -2.9],   // Drone bench
-  [5.1, 8.8, .05, 3.8],     // Robots and test course
-  [8.7, 10.6, -7.25, -5.8], // Storage rack
-  [-10.8, -9.45, 3.3, 7.1]  // Tool cabinets
-];
+const obstacles = toWorld([
+  [-7.1, -2.7, -4.9, -3.6],   // Whiteboard cabinet
+  [-7.35, -2.85, -.73, 1.93], // Boat bench
+  [4.05, 7.75, -2.48, 1.27],  // F1TENTH mat and test course
+  [4.05, 7.75, 1.65, 4.85],   // AlphaTruck mat
+  [6.55, 8.45, -5.5, -4.05],  // Storage rack
+  [-8.3, -6.95, 2.4, 5.1]     // Tool cabinets
+]);
 
 const clearance = .39;
 export function canWalk(x, z) {
-  return Math.abs(x) <= roomWidth / 2 - clearance && Math.abs(z) <= roomDepth / 2 - clearance &&
+  return Math.abs(x) <= roomWidth * labScale / 2 - clearance && Math.abs(z) <= roomDepth * labScale / 2 - clearance &&
     !obstacles.some(([left, right, back, front]) =>
       x > left - clearance && x < right + clearance && z > back - clearance && z < front + clearance);
 }
@@ -144,7 +160,7 @@ function label(parent, text, x, y, z, w, h, color = "#324951") {
 
 function whiteboard(scene) {
   box(scene, ink, -7.1, 2.63, -7.19, 6.5, 2.62, .15);
-  const board = panel(scene, -7.1, 2.63, -7.101, 6.26, 2.4, (ctx, width, height) => {
+  function header(ctx, width, height) {
     ctx.fillStyle = "#f5f2e7";
     ctx.fillRect(0, 0, width, height);
     ctx.fillStyle = "#245d62";
@@ -152,48 +168,72 @@ function whiteboard(scene) {
     ctx.fillText("Selected publications", 26, 53);
     ctx.fillStyle = "#6a9589";
     ctx.fillRect(26, 63, width - 52, 2);
-  });
+  }
+  const board = panel(scene, -7.1, 2.63, -7.101, 6.26, 2.4, header);
   const map = board.material.map;
   const ctx = map.image.getContext("2d");
-  publications.then((papers) => {
-    if (!papers.length) {
-      ctx.font = "20px sans-serif";
-      ctx.fillText("Browse the papers from the lab guide.", 26, 107);
-      map.needsUpdate = true;
-      return;
+  const figures = new Map();
+  let papers = [];
+  let active = null;
+  let activePosition;
+  function drawFigure(paper, x, y, width, height) {
+    ctx.fillStyle = "#e5e9e2";
+    ctx.fillRect(x, y, width, height);
+    const image = figures.get(paper.figure);
+    if (image?.naturalWidth) {
+      const scale = Math.min((width - 8) / image.naturalWidth, (height - 8) / image.naturalHeight);
+      const w = image.naturalWidth * scale;
+      const h = image.naturalHeight * scale;
+      ctx.drawImage(image, x + (width - w) / 2, y + (height - h) / 2, w, h);
     }
-    for (const [index, paper] of papers.slice(0, 4).entries()) {
-      const x = 26 + (index % 2) * 365;
-      const y = 81 + Math.floor(index / 2) * 103;
-      ctx.fillStyle = "#e5e9e2";
-      ctx.fillRect(x, y, 81, 84);
+  }
+  function drawTitle(paper, x, baseline, maxWidth, size) {
+    ctx.fillStyle = "#293d43";
+    ctx.font = `600 ${size}px sans-serif`;
+    let line = "";
+    for (const word of paper.title.split(/\s+/)) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(next).width > maxWidth) {
+        ctx.fillText(line, x, baseline);
+        baseline += size + 2;
+        line = word;
+      } else line = next;
+    }
+    ctx.fillText(line, x, baseline);
+  }
+  function render() {
+    header(ctx, map.image.width, map.image.height);
+    ctx.fillStyle = "#28676b";
+    if (active) {
+      ctx.font = "700 15px sans-serif";
+      ctx.fillText(activePosition, 610, 49);
+      drawFigure(active, 25, 83, 216, 183);
       ctx.fillStyle = "#28676b";
-      ctx.font = "700 14px sans-serif";
-      ctx.fillText(paper.venue.toUpperCase(), x + 92, y + 12);
-      ctx.fillStyle = "#293d43";
-      ctx.font = "600 16px sans-serif";
-      let line = "";
-      let baseline = y + 34;
-      for (const word of paper.title.split(/\s+/)) {
-        const next = [line, word].filter(Boolean).join(" ");
-        if (line && ctx.measureText(next).width > 251) {
-          ctx.fillText(line, x + 92, baseline);
-          baseline += 16;
-          line = word;
-        } else line = next;
+      ctx.font = "700 20px sans-serif";
+      ctx.fillText(active.venue.toUpperCase(), 266, 107);
+      drawTitle(active, 266, 146, 475, 31);
+    } else {
+      for (const [index, paper] of papers.slice(0, 4).entries()) {
+        const x = 26 + (index % 2) * 365;
+        const y = 81 + Math.floor(index / 2) * 103;
+        drawFigure(paper, x, y, 81, 84);
+        ctx.fillStyle = "#28676b";
+        ctx.font = "700 14px sans-serif";
+        ctx.fillText(paper.venue.toUpperCase(), x + 92, y + 12);
+        drawTitle(paper, x + 92, y + 32, 251, 16);
       }
-      ctx.fillText(line, x + 92, baseline);
-      const image = new Image();
-      image.addEventListener("load", () => {
-        const ratio = Math.min(73 / image.width, 76 / image.height);
-        const w = image.width * ratio;
-        const h = image.height * ratio;
-        ctx.drawImage(image, x + (81 - w) / 2, y + (84 - h) / 2, w, h);
-        map.needsUpdate = true;
-      }, { once: true });
-      image.src = paper.figure;
     }
     map.needsUpdate = true;
+  }
+  whiteboardPapers.then((items) => {
+    papers = items;
+    for (const paper of papers) {
+      const image = new Image();
+      figures.set(paper.figure, image);
+      image.addEventListener("load", render, { once: true });
+      image.src = paper.figure;
+    }
+    render();
   });
   box(scene, 0x6d898d, -7.1, 1.28, -7, 6.4, .08, .29);
   box(scene, teal, -6.14, 1.349, -6.99, .36, .06, .06).rotation.y = -.13;
@@ -202,6 +242,11 @@ function whiteboard(scene) {
   const closedNotebook = box(scene, 0x465b75, -8.36, .964, -6.33, .55, .088, .68);
   closedNotebook.rotation.y = .18;
   box(scene, cream, -8.35, .964, -6.001, .49, .048, .01).rotation.y = .18;
+  return (paper, number, total) => {
+    active = paper;
+    activePosition = `${number} / ${total}`;
+    render();
+  };
 }
 
 function cabinet(scene, x, z, w, h, d, color) {
@@ -225,6 +270,71 @@ function workbench(scene, x, z, w, d, tag, color, worktop) {
   }
   label(bench, tag, .38, .89, d / 2 + .006, 1.7, .2);
   return bench;
+}
+
+// The F10 hangs flat on the back wall like a museum piece, top side facing the room.
+function droneDisplay(scene, x, y) {
+  const wall = -roomDepth / 2;
+  box(scene, 0x30474e, x, y, wall + .1, 3.85, 2.3, .05);
+  box(scene, 0xe4e7dc, x, y, wall + .131, 3.7, 2.15, .012);
+  for (const dx of [-.8, .8]) box(scene, darkMetal, x + dx, y - .05, wall + .29, .07, .07, .32);
+  const mount = group(scene, x, y, wall + .55);
+  skydioF10(mount);
+  const craft = mount.children.at(-1);
+  craft.position.set(0, 0, 0);
+  craft.rotation.set(Math.PI / 2, 0, -.1, "ZYX");
+  label(scene, "SKYDIO F10 LIGHTRUNNER", x, y - 1.36, wall + .12, 2.3, .22);
+}
+
+// A desktop computer on the left cabinet; its screen faces the room and shows the blog.
+function blogComputer(parent, x, z, top) {
+  const bezel = 0x1c2328;
+  box(parent, darkMetal, x - .15, top + .015, z, .34, .03, .42);
+  box(parent, darkMetal, x - .2, top + .26, z, .06, .48, .08);
+  box(parent, bezel, x - .14, top + .72, z, .06, .74, 1.24);
+  const display = panel(parent, x - .108, top + .72, z, 1.14, .64, (ctx, w, h) => {
+    ctx.fillStyle = "#17262b";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#24383e";
+    ctx.fillRect(0, 0, w, 44);
+    ["#e07a5f", "#e2ad58", "#7fb48a"].forEach((color, i) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(26 + i * 24, 22, 7, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = "#9fb7b0";
+    ctx.font = "600 20px monospace";
+    ctx.fillText("ogpoyrazoglu.github.io/blog", 110, 29);
+    ctx.fillStyle = "#f3f1e8";
+    ctx.font = "italic 400 58px Georgia, serif";
+    ctx.fillText("Thoughts on robotics", 44, 150);
+    ctx.fillStyle = "#e2ad58";
+    ctx.fillRect(44, 176, 120, 4);
+    ctx.fillStyle = "#c9d6d0";
+    ctx.font = "400 26px sans-serif";
+    ctx.fillText("Notes from the lab, coming soon.", 44, 236);
+    for (const [y, width] of [[290, 520], [326, 470], [362, 300]]) {
+      ctx.fillStyle = "#2c4248";
+      ctx.fillRect(44, y, width, 14);
+    }
+    ctx.fillStyle = "#f3f1e8";
+    ctx.fillRect(44, 392, 16, 28);
+  });
+  display.rotation.y = Math.PI / 2;
+  box(parent, 0xd9dccf, x + .3, top + .02, z, .3, .03, .86);
+  box(parent, 0xb2b8ad, x + .3, top + .037, z, .24, .006, .78);
+  round(parent, 0xd9dccf, x + .32, top + .03, z + .64, .07, .035, .05);
+  cylinder(parent, rust, x + .22, top + .1, z - .8, .16, .2);
+  cylinder(parent, 0x3a2a22, x + .22, top + .195, z - .8, .13, .012);
+}
+
+function robotMat(scene, x, z, w, d) {
+  box(scene, 0x557375, x, .027, z, w, .048, d);
+  for (const side of [-1, 1]) {
+    box(scene, 0xe5c47c, x + side * (w / 2 - .08), .053, z, .052, .014, d - .18);
+    box(scene, 0xe5c47c, x, .053, z + side * (d / 2 - .12), w - .14, .014, .052);
+  }
 }
 
 function crate(parent, color, x, y, z, w, h, d) {
@@ -268,43 +378,63 @@ function character(scene) {
     arms.push(arm);
   }
   let stride = 0;
+  // The block figure is only a fallback: it stays hidden while the avatar loads, so no other
+  // character flashes on screen, and appears only if the avatar fails to load.
+  body.visible = false;
+  let walk = (distance, time, reducedMotion) => {
+    stride += distance * 7.4;
+    const swing = reducedMotion ? 0 : Math.sin(stride) * Math.min(.48, distance / Math.max(time, .001) * .19);
+    body.position.y = swing ? Math.abs(swing) * .09 : 0;
+    legs.forEach((leg, i) => { leg.rotation.x = i === 0 ? swing : -swing; });
+    arms.forEach((arm, i) => { arm.rotation.x = i === 0 ? -swing * .72 : swing * .72; });
+  };
+  const shown = loadAvatar(avatarHeight).then((avatar) => {
+    avatar.figure.rotation.y = Math.PI; // The avatar faces +z; the walker faces -z at heading 0.
+    player.remove(body);
+    player.add(avatar.figure);
+    walk = avatar.walk;
+  }).catch((error) => {
+    console.warn("The lab avatar could not load, so the block figure stands in.", error);
+    body.visible = true;
+  });
   return {
     player,
-    walk(distance, time, reducedMotion) {
-      stride += distance * 7.4;
-      const swing = reducedMotion ? 0 : Math.sin(stride) * Math.min(.48, distance / Math.max(time, .001) * .19);
-      body.position.y = swing ? Math.abs(swing) * .09 : 0;
-      legs.forEach((leg, i) => { leg.rotation.x = i === 0 ? swing : -swing; });
-      arms.forEach((arm, i) => { arm.rotation.x = i === 0 ? -swing * .72 : swing * .72; });
-    }
+    shown,
+    walk: (distance, time, reducedMotion) => walk(distance, time, reducedMotion)
   };
 }
 
 function room(scene) {
-  box(scene, 0x8a9c98, 0, -.32, 0, 22.42, .64, 15.43);
-  box(scene, concrete(), 0, -.022, 0, 22, .04, 15);
-  for (let x = -9; x <= 9; x += 3) box(scene, 0x888f90, x, .002, 0, .018, .005, 15);
-  for (let z = -6; z <= 6; z += 3) box(scene, 0x888f90, 0, .002, z, 22, .005, .018);
-  box(scene, 0xd9e3df, 0, 2.3, -7.57, 22.36, 4.6, .28);
-  box(scene, 0xb1c3be, -11.08, 2.3, 0, .28, 4.6, 15);
-  box(scene, 0x657e82, 0, .22, -7.39, 22, .42, .08);
-  box(scene, 0x657e82, -10.9, .22, 0, .08, .42, 15);
-  box(scene, teal, 0, 4.47, -7.56, 22.42, .16, .34);
-  box(scene, teal, -11.09, 4.47, 0, .34, .16, 15.14);
-  box(scene, 0x859997, 11.02, .25, 0, .17, .5, 15.1);
-  for (const x of [-6.82, 6.82]) box(scene, 0x859997, x, .25, 7.51, 8.47, .5, .18);
+  const w = roomWidth;
+  const d = roomDepth;
+  const back = -d / 2;
+  const left = -w / 2;
+  box(scene, 0x8a9c98, 0, -.32, 0, w + .42, .64, d + .43);
+  box(scene, concrete(), 0, -.022, 0, w, .04, d);
+  for (let x = -6; x <= 6; x += 3) box(scene, 0x888f90, x, .002, 0, .018, .005, d);
+  for (let z = -3; z <= 3; z += 3) box(scene, 0x888f90, 0, .002, z, w, .005, .018);
+  box(scene, 0xd9e3df, 0, 2.3, back - .07, w + .36, 4.6, .28);
+  box(scene, 0xb1c3be, left - .08, 2.3, 0, .28, 4.6, d);
+  box(scene, 0x657e82, 0, .22, back + .11, w, .42, .08);
+  box(scene, 0x657e82, left + .1, .22, 0, .08, .42, d);
+  box(scene, teal, 0, 4.47, back - .06, w + .42, .16, .34);
+  box(scene, teal, left - .09, 4.47, 0, .34, .16, d + .14);
+  box(scene, 0x859997, w / 2 + .02, .25, 0, .17, .5, d + .1);
+  // Low front walls leave a doorway between x = -2.6 and 2.6.
+  const front = w / 2 + .085 - 2.6;
+  for (const side of [-1, 1]) box(scene, 0x859997, side * (2.6 + front / 2), .25, d / 2 + .01, front, .5, .18);
 
-  box(scene, 0x899997, 0, 4.1, -7.347, 21.8, .09, .13);
-  for (const x of [-9.9, -4.1, .7, 5.6, 9.9]) {
-    box(scene, 0xa8b2af, x, 4.09, -7.239, .14, .22, .19);
+  box(scene, 0x899997, 0, 4.1, back + .153, w - .2, .09, .13);
+  for (const x of [-6.6, -2.2, 2.2, 6.6]) {
+    box(scene, 0xa8b2af, x, 4.09, back + .261, .14, .22, .19);
   }
-  box(scene, 0x909e9c, -10.89, 3.5, 2.55, .12, .065, 9.5);
-  box(scene, 0x909e9c, -10.89, 2.04, 5.79, .12, 2.9, .07);
-  box(scene, 0x52676b, -10.88, .99, 5.79, .15, .28, .21);
+  box(scene, 0x909e9c, left + .11, 3.5, 1.2, .12, .065, 8.2);
+  box(scene, 0x909e9c, left + .11, 2.04, 4.6, .12, 2.9, .07);
+  box(scene, 0x52676b, left + .12, 1.3, 4.6, .15, .28, .21);
 
-  for (const x of [-.4, 3.5, 7.4]) {
-    box(scene, ink, x, 2.91, -7.369, 3.43, 1.7, .09);
-    panel(scene, x, 2.91, -7.316, 3.23, 1.51, (ctx, w, h) => {
+  for (const x of [.45]) {
+    box(scene, ink, x, 2.91, back + .131, 3.43, 1.7, .09);
+    panel(scene, x, 2.91, back + .184, 3.23, 1.51, (ctx, w, h) => {
       const sky = ctx.createLinearGradient(0, 0, 0, h);
       sky.addColorStop(0, "#9fc3cb");
       sky.addColorStop(1, "#ecedd8");
@@ -320,13 +450,14 @@ function room(scene) {
       ctx.lineTo(w, h);
       ctx.fill();
     });
-    box(scene, ink, x, 2.91, -7.30, .075, 1.56, .045);
-    box(scene, 0xc1d2cb, x, 2.11, -7.28, 3.52, .10, .19);
+    box(scene, ink, x, 2.91, back + .2, .075, 1.56, .045);
+    box(scene, 0xc1d2cb, x, 2.11, back + .22, 3.52, .10, .19);
   }
 
-  label(scene, "OGP  /  ROBOTICS LAB", -1.7, 1.06, -7.381, 3.1, .38);
-  cabinet(scene, -10.12, 5.15, 1.25, .96, 3.36, teal);
-  const shelf = group(scene, 9.57, 0, -6.49);
+  label(scene, "OGP  /  ROBOTICS LAB", .45, 1.06, back + .119, 3.1, .38);
+  cabinet(scene, -7.62, 3.75, 1.25, .96, 2.6, teal);
+  blogComputer(scene, -7.62, 3.75, 1.08);
+  const shelf = group(scene, 7.5, 0, -4.74);
   for (const x of [-.88, .88]) for (const z of [-.58, .58]) box(shelf, ink, x, 1.56, z, .075, 3.12, .08);
   for (const y of [.27, 1.17, 2.1, 3.03]) box(shelf, teal, 0, y, 0, 1.82, .12, 1.24);
   crate(shelf, yellow, -.43, .35, 0, .72, .58, .88);
@@ -341,38 +472,36 @@ export function buildWorld(renderer) {
   scene.add(new T.HemisphereLight(0xe6edf7, 0xa7a599, 1.05));
   lightLab(scene, renderer);
 
-  room(scene);
-  whiteboard(scene);
+  const lab = group(scene, 0, 0, 0);
+  lab.scale.setScalar(labScale);
+  room(lab);
+  // The whiteboard and boat were modelled for a larger room, so they shift as groups.
+  const showPaper = whiteboard(group(lab, 2.2, 0, 2));
   const worktop = wood();
-  const boatBench = workbench(scene, -6.85, .875, 4.45, 2.65, "BLUEBOAT", 0x3c778c, worktop);
+  const boatBench = workbench(lab, -5.1, .6, 4.45, 2.65, "BLUEBOAT", 0x3c778c, worktop);
   crate(boatBench, 0x739da3, -1.2, .47, .17, .94, .33, .71);
   crate(boatBench, cream, 1.16, .47, .13, .6, .32, .65);
-  softShadow(scene, -6.86, .87, 3.8, 2.13, .67, 1.167);
-  blueBoat(scene);
-  const flightBench = workbench(scene, 6.55, -4.32, 4.2, 2.85, "F10 LIGHTRUNNER", 0x426b83, worktop);
-  crate(flightBench, teal, 1.28, .47, .32, .9, .34, .73);
-  box(flightBench, darkMetal, -.13, 1.192, -.04, 3.56, .064, 2.04);
-  for (const z of [-.425, .33]) {
-    box(flightBench, darkMetal, -.13 - z * .24, 1.31, -.04 + z, .33, .17, .18).rotation.y = -.24;
-    box(flightBench, ink, -.13 - z * .24, 1.405, -.04 + z, .26, .037, .15).rotation.y = -.24;
-  }
-  skydioF10(flightBench);
+  softShadow(lab, -5.11, .6, 3.8, 2.13, .67, 1.167);
+  blueBoat(group(lab, 1.75, 0, -.275));
+  droneDisplay(lab, 4.3, 2.5);
 
-  box(scene, 0x557375, 6.95, .027, 1.93, 3.7, .048, 3.75);
-  for (const x of [5.18, 8.72]) box(scene, 0xe5c47c, x, .053, 1.93, .052, .014, 3.57);
-  for (const z of [.19, 3.67]) box(scene, 0xe5c47c, 6.95, .053, z, 3.56, .014, .052);
-  f1tenthRacer(scene, 6.73, 2.05);
-  cylinder(scene, 0x898f90, 8.09, .27, .83, .72, .44);
-  cylinder(scene, 0xb4b8b5, 8.09, .497, .83, .70, .026);
-  cylinder(scene, 0x929794, 5.89, .23, .56, .55, .35);
-  cylinder(scene, 0xb8bdb8, 5.89, .411, .56, .53, .026);
+  robotMat(lab, 5.9, -.6, 3.7, 3.75);
+  f1tenthRacer(lab, 5.68, -.48);
+  cylinder(lab, 0x898f90, 7.04, .27, -1.7, .72, .44);
+  cylinder(lab, 0xb4b8b5, 7.04, .497, -1.7, .70, .026);
+  cylinder(lab, 0x929794, 4.84, .23, -1.97, .55, .35);
+  cylinder(lab, 0xb8bdb8, 4.84, .411, -1.97, .53, .026);
+  robotMat(lab, 5.9, 3.25, 3.7, 3.2);
+  alphaTruck(lab, 5.9, 3.25, -1.2);
 
-  for (const [x, z, w, d] of [[-6.8, .9, 5.7, 3.65], [6.5, -4.3, 5.6, 3.7], [-7.1, -6.35, 5.5, 1.7], [9.6, -6.5, 2.9, 2.2], [-10.1, 5.1, 2.2, 4.6]]) {
-    softShadow(scene, x, z, w, d, .56);
+  for (const [x, z, w, d] of [[-5.05, .62, 5.7, 3.65], [-4.9, -4.35, 5.5, 1.7], [7.53, -4.75, 2.9, 2.2], [-7.62, 3.75, 2.2, 3.6]]) {
+    softShadow(lab, x, z, w, d, .56);
   }
   const beacons = stops.map((stop) => ({ ...stop, position: new T.Vector3(...stop.marker) }));
-  const { player, walk } = character(scene);
+  const { player, walk, shown } = character(scene);
   player.traverse(part => { part.castShadow = false; });
   const shadow = softShadow(scene, 0, 0, 1.4, 1.16, .72);
-  return { scene, player, shadow, walk, beacons };
+  shadow.visible = false; // The walker's floor shadow appears with the walker.
+  shown.then(() => { shadow.visible = true; });
+  return { scene, player, shadow, walk, beacons, showPaper };
 }

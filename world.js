@@ -1,4 +1,4 @@
-import { publications } from "./publications.js";
+import { whiteboardPapers } from "./publications.js";
 
 const exhibits = [
   {
@@ -20,11 +20,21 @@ const exhibits = [
     title: "F1TENTH racer", type: "Ground robotics",
     text: "This open-chassis, one-tenth-scale racer is modeled after the car we used to test C-Uniform motion planning around indoor obstacles.",
     link: ["See the C-Uniform experiments", "https://ogpoyrazoglu.github.io/cuniform_sampling/cuniform.html"]
+  },
+  {
+    title: "UT AlphaTruck", type: "Off-road robotics",
+    text: "This model is based on UT Austin AMRL’s AlphaTruck, a 1/5-scale Traxxas X-Maxx built for high-speed off-road autonomy. It carries a Livox Mid-360 lidar, a VectorNav VN-100 IMU, and an NVIDIA Jetson Orin AGX.",
+    link: ["See the OptCar project", "https://amrl.cs.utexas.edu/optcar/"]
+  },
+  {
+    title: "Blog", type: "Writing",
+    text: "My thoughts on robotics. The first posts are on the way.",
+    link: ["Open the blog", "blog.html"]
   }
 ];
 const home = {
   title: "Lab entrance", type: "Lab tour",
-  text: "Start at the publications whiteboard, then visit the BlueBoat, Skydio F10, and F1TENTH racer.",
+  text: "Start at the publications whiteboard, then visit the BlueBoat, Skydio F10, F1TENTH racer, and AlphaTruck.",
   link: ["See my research", "classic.html#research"]
 };
 const canvas = document.querySelector("#map");
@@ -35,29 +45,58 @@ const title = document.querySelector("#exhibit-title");
 const type = document.querySelector("#exhibit-type");
 const copy = document.querySelector("#exhibit-copy");
 const link = document.querySelector("#exhibit-link");
-const paperLinks = document.querySelector("#publication-links");
+const paperViewer = document.querySelector("#paper-viewer");
+const paperPosition = document.querySelector("#paper-position");
+const paperDetail = document.querySelector("#paper-detail");
+const paperPrev = document.querySelector("#paper-prev");
+const paperNext = document.querySelector("#paper-next");
 const cameraButton = document.querySelector("#camera");
 const resetButton = document.querySelector("#reset");
 const inspectButton = document.querySelector("#inspect-exhibit");
+const card = document.querySelector(".exhibit");
 const pad = [...document.querySelectorAll("[data-direction]")];
-const stops = [...document.querySelectorAll("[data-stop]")];
 let current = -1;
 let walkToStop = () => {};
 let markers = [];
 let sceneReady = false;
+let papers = [];
+let paperIndex = 0;
+let readingWhiteboard = false;
+let drawPaper = () => {};
+// Walking speeds in world units per second: arrow keys and the guided tour.
+const walkSpeed = 3;
+const tourSpeed = 3.4;
 
-publications.then((papers) => {
-  for (const paper of papers) {
-    const item = document.createElement("li");
-    const anchor = document.createElement("a");
-    anchor.href = paper.href;
-    anchor.textContent = paper.title;
-    item.append(anchor);
-    paperLinks.append(item);
-  }
-  paperLinks.hidden = current !== 0 || !paperLinks.childElementCount;
+whiteboardPapers.then((items) => {
+  papers = items;
+  refreshPapers();
 });
 
+// The whiteboard shows each paper's title and figure, so the close-up bar only steps through them.
+function refreshPapers() {
+  const paper = papers[paperIndex];
+  const single = readingWhiteboard && Boolean(paper);
+  paperViewer.hidden = !single;
+  if (!single) return;
+  paperPosition.textContent = `Paper ${paperIndex + 1} of ${papers.length}`;
+  paperDetail.href = paper.href;
+  paperDetail.setAttribute("aria-label", `Open paper: ${paper.title}`);
+  paperPrev.disabled = paperIndex === 0;
+  paperNext.disabled = paperIndex === papers.length - 1;
+  drawPaper(paper, paperIndex + 1, papers.length);
+}
+
+function changePaper(step) {
+  const next = paperIndex + step;
+  if (!readingWhiteboard || next < 0 || next >= papers.length) return;
+  paperIndex = next;
+  refreshPapers();
+}
+
+paperPrev.addEventListener("click", () => changePaper(-1));
+paperNext.addEventListener("click", () => changePaper(1));
+
+// The exhibit card, with its close-up button, shows only while the walker stands at an exhibit.
 function showExhibit(index) {
   if (current === index) return;
   current = index;
@@ -67,22 +106,14 @@ function showExhibit(index) {
   copy.textContent = item.text;
   link.firstChild.textContent = item.link[0] + " ";
   link.href = item.link[1];
-  paperLinks.hidden = index !== 0 || !paperLinks.childElementCount;
+  refreshPapers();
+  card.hidden = index < 0;
   inspectButton.hidden = !sceneReady || index < 0;
-  stops.forEach((button, i) => {
-    for (const control of [button, markers[i]].filter(Boolean)) {
-      if (i === index) control.setAttribute("aria-current", "location");
-      else control.removeAttribute("aria-current");
-    }
+  markers.forEach((marker, i) => {
+    if (i === index) marker.setAttribute("aria-current", "location");
+    else marker.removeAttribute("aria-current");
   });
 }
-
-stops.forEach((button, index) => {
-  button.addEventListener("click", () => {
-    showExhibit(index);
-    walkToStop(index);
-  });
-});
 
 async function start() {
   try {
@@ -95,7 +126,7 @@ async function start() {
     for (const button of [cameraButton, resetButton, ...pad]) button.disabled = false;
   } catch (error) {
     console.warn("3D robotics lab unavailable", error);
-    status.textContent = "The 3D scene couldn’t load. You can still browse the exhibits using the stop list.";
+    status.innerHTML = "The 3D scene couldn’t load in this browser. The <a href=\"classic.html\">classic site</a> has the same research.";
   }
 }
 
@@ -108,7 +139,8 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
   renderer.shadowMap.type = T.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
-  const { scene, player, shadow, walk, beacons } = buildWorld(renderer);
+  const { scene, player, shadow, walk, beacons, showPaper } = buildWorld(renderer);
+  drawPaper = showPaper;
   const camera = new T.PerspectiveCamera(39, 1, .1, 100);
   const cameraGoal = new T.Vector3();
   const gaze = new T.Vector3();
@@ -122,16 +154,9 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     w: "up", arrowup: "up", a: "left", arrowleft: "left",
     s: "down", arrowdown: "down", d: "right", arrowright: "right"
   };
-  const lengths = [0];
-  for (let i = 1; i < trail.length; i++) {
-    lengths.push(lengths[i - 1] + Math.hypot(trail[i][0] - trail[i - 1][0], trail[i][1] - trail[i - 1][1]));
-  }
-  const end = lengths.at(-1);
   let overview = true;
   let inspecting = -1;
   let heading = 0;
-  let progress = 0;
-  let target = 0;
   let touring = false;
   let approach = [];
   let selectedStop = -1;
@@ -145,36 +170,10 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     const number = document.createElement("span");
     number.textContent = i + 1;
     marker.append(number);
-    marker.addEventListener("click", () => stops[i].click());
+    marker.addEventListener("click", () => walkToStop(i));
     document.querySelector("#map-markers").append(marker);
     return marker;
   });
-
-  function pointAt(distance) {
-    const next = lengths.findIndex((value, i) => i > 0 && value >= distance);
-    if (next < 0) return trail.at(-1);
-    const fraction = (distance - lengths[next - 1]) / (lengths[next] - lengths[next - 1]);
-    const [x, z] = trail[next - 1];
-    return [T.MathUtils.lerp(x, trail[next][0], fraction), T.MathUtils.lerp(z, trail[next][1], fraction)];
-  }
-
-  function nearestTrail() {
-    let closest = Infinity;
-    let trailPosition = progress;
-    for (let i = 1; i < trail.length; i++) {
-      const [x, z] = trail[i - 1];
-      const dx = trail[i][0] - x;
-      const dz = trail[i][1] - z;
-      const fraction = T.MathUtils.clamp(((player.position.x - x) * dx + (player.position.z - z) * dz) / (dx * dx + dz * dz), 0, 1);
-      const separation = Math.hypot(player.position.x - x - dx * fraction, player.position.z - z - dz * fraction);
-      const candidate = T.MathUtils.lerp(lengths[i - 1], lengths[i], fraction);
-      if (separation + .001 < closest || (Math.abs(separation - closest) < .001 && Math.abs(candidate - progress) < Math.abs(trailPosition - progress))) {
-        closest = separation;
-        trailPosition = candidate;
-      }
-    }
-    return trailPosition;
-  }
 
   function setPosition(x, z) {
     const dx = x - player.position.x;
@@ -183,26 +182,22 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     player.position.set(x, 0, z);
   }
 
-  function tourTo(distance) {
-    if (!touring) {
-      progress = nearestTrail();
-      approach = routeTo([player.position.x, player.position.z], pointAt(progress));
-      if (!approach.length) return;
-    }
-    held.clear();
-    target = distance;
-    touring = true;
-    if (reducedMotion.matches) {
-      setPosition(...pointAt(distance));
-      progress = distance;
-      approach = [];
-    }
-  }
-
+  // Walks the shortest clear route to an exhibit's standing point, then turns to face it.
   walkToStop = (i) => {
     stopInspecting();
+    const goal = trail[beacons[i].point];
+    const route = routeTo([player.position.x, player.position.z], goal);
+    if (!route.length) return;
+    held.clear();
     selectedStop = i;
-    tourTo(lengths[beacons[i].point]);
+    approach = route;
+    touring = true;
+    if (reducedMotion.matches) {
+      setPosition(...goal);
+      heading = beacons[i].facing;
+      approach = [];
+      touring = false;
+    }
   };
 
   function move(direction, key) {
@@ -218,8 +213,21 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
       stopInspecting();
       return;
     }
-    if (event.altKey || event.ctrlKey || event.metaKey || ![canvas, document.body].includes(event.target)) return;
+    // Arrow keys still turn papers after clicking a paper button, which keeps focus.
+    if (readingWhiteboard && !event.target.closest?.("input, textarea, select, [contenteditable]") &&
+        !event.altKey && !event.ctrlKey && !event.metaKey && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      changePaper(event.key === "ArrowLeft" ? -1 : 1);
+      return;
+    }
+    // Lab keys work anywhere on the page except while typing in a text field.
+    if (event.altKey || event.ctrlKey || event.metaKey || event.target.closest?.("input, textarea, select, [contenteditable]")) return;
     const key = event.key.toLowerCase();
+    if (key === "e" && !event.repeat && !inspectButton.hidden) {
+      event.preventDefault();
+      inspectButton.click();
+      return;
+    }
     if (!keyDirection[key] || interrupted) return;
     event.preventDefault();
     move(keyDirection[key], key);
@@ -229,18 +237,6 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
   canvas.addEventListener("blur", () => {
     for (const key of Object.keys(keyDirection)) held.delete(key);
   });
-  frame.addEventListener("wheel", (event) => {
-    if (interrupted || event.ctrlKey || event.metaKey) return;
-    const delta = event.deltaY || event.deltaX;
-    const base = touring ? target : nearestTrail();
-    const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 160 : 1;
-    const destination = T.MathUtils.clamp(base + delta * scale * .05, 0, end);
-    if (base === destination) return;
-    event.preventDefault();
-    stopInspecting();
-    selectedStop = -1;
-    tourTo(destination);
-  }, { passive: false });
   for (const button of pad) {
     const direction = button.dataset.direction;
     const key = `touch-${direction}`;
@@ -264,9 +260,21 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
   function stopInspecting() {
     if (inspecting < 0) return;
     inspecting = -1;
-    inspectButton.setAttribute("aria-pressed", "false");
-    inspectButton.textContent = "Close-up view";
-    cameraButton.textContent = overview ? "Follow camera" : "Lab overview";
+    readingWhiteboard = false;
+    drawPaper();
+    refreshPapers();
+    setCloseUp(false);
+  }
+
+  // In a close-up the card folds into a slim bar so it does not cover the exhibit.
+  function setCloseUp(on) {
+    card.classList.toggle("is-closeup", on);
+    document.body.classList.toggle("is-inspecting", on);
+    inspectButton.setAttribute("aria-pressed", String(on));
+    inspectButton.setAttribute("aria-keyshortcuts", on ? "Escape" : "E");
+    inspectButton.querySelector(".label").textContent = on ? "Exit close-up" : "Close-up view";
+    inspectButton.querySelector("kbd").textContent = on ? "Esc" : "E";
+    cameraButton.textContent = on ? "Exit close-up" : overview ? "Follow camera" : "Lab overview";
   }
 
   inspectButton.addEventListener("click", () => {
@@ -276,10 +284,10 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     }
     walkToStop(current);
     inspecting = current;
-    inspectButton.setAttribute("aria-pressed", "true");
-    inspectButton.textContent = "Exit close-up";
-    cameraButton.textContent = "Exit close-up";
-    if (window.matchMedia("(max-width: 800px)").matches) frame.scrollIntoView({ block: "center" });
+    readingWhiteboard = current === 0;
+    paperIndex = 0;
+    refreshPapers();
+    setCloseUp(true);
   });
 
   cameraButton.addEventListener("click", () => {
@@ -295,8 +303,6 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     stopInspecting();
     held.clear();
     heading = 0;
-    target = 0;
-    progress = 0;
     touring = false;
     approach = [];
     selectedStop = -1;
@@ -305,6 +311,27 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
   }
   resetButton.addEventListener("click", reset);
   reset();
+
+  // Arriving from the welcome page's lab door: walk in through the front doorway while the
+  // camera pulls back from just behind the walker to the lab overview.
+  let introEnd = 0;
+  let fromWelcome = false;
+  try {
+    fromWelcome = sessionStorage.getItem("ogp:enter-lab") === "1";
+    sessionStorage.removeItem("ogp:enter-lab");
+  } catch {}
+  if (fromWelcome && !reducedMotion.matches) {
+    // Start just inside the front doorway (the floor ends at the wall) and walk a few steps in.
+    const [x, z] = trail[0];
+    const doorway = z + .8;
+    player.position.set(x, 0, doorway);
+    approach = [[x, z - .8]];
+    touring = true;
+    // Start where the welcome page left off: the avatar seen from behind, about half the screen tall.
+    camera.position.set(x, 1.5, doorway + 5.1);
+    gaze.set(x, 1.05, doorway);
+    introEnd = performance.now() + 2800;
+  }
 
   function resize() {
     const w = frame.clientWidth;
@@ -321,22 +348,21 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     if (touring && approach.length) {
       const [x, z] = approach[0];
       const remaining = Math.hypot(x - player.position.x, z - player.position.z);
-      const t = remaining ? Math.min(1, dt * 4.8 / remaining) : 1;
+      const t = remaining ? Math.min(1, dt * tourSpeed / remaining) : 1;
       setPosition(T.MathUtils.lerp(player.position.x, x, t), T.MathUtils.lerp(player.position.z, z, t));
       if (t === 1) approach.shift();
       return;
     }
     if (touring) {
-      progress += T.MathUtils.clamp(target - progress, -dt * 4.8, dt * 4.8);
-      setPosition(...pointAt(progress));
-      if (progress === target && selectedStop >= 0) heading = beacons[selectedStop].facing;
+      touring = false;
+      if (selectedStop >= 0) heading = beacons[selectedStop].facing;
       return;
     }
     const pressed = [...held.values()];
     const horizontal = Number(pressed.includes("right")) - Number(pressed.includes("left"));
     const vertical = Number(pressed.includes("down")) - Number(pressed.includes("up"));
     if (!horizontal && !vertical) return;
-    const step = 4.5 * dt / Math.hypot(horizontal, vertical);
+    const step = walkSpeed * dt / Math.hypot(horizontal, vertical);
     const dx = (horizontal * screenRight.x + vertical * screenDown.x) * step;
     const dz = (horizontal * screenRight.y + vertical * screenDown.y) * step;
     heading = Math.atan2(-dx, -dz);
@@ -351,16 +377,18 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
       gazeGoal.set(...focus);
       cameraGoal.set(focus[0] + view[0] * distance, focus[1] + view[1] * distance, focus[2] + view[2] * distance);
     } else if (overview) {
-      const distance = Math.max(1, 1.39 / camera.aspect);
-      cameraGoal.set(9.2 * distance, 18.5 * distance, 24.7 * distance);
-      gazeGoal.set(0, .8, -.2);
+      const distance = Math.max(.82, 1.3 / camera.aspect);
+      cameraGoal.set(6.1 * distance, 12.2 * distance, 16.3 * distance);
+      gazeGoal.set(0, .6, -.2);
     } else {
       const x = player.position.x;
       const z = player.position.z;
-      cameraGoal.set(x + 2.65, 7.4, z + 7.11);
-      gazeGoal.set(x, 1, z - .5);
+      cameraGoal.set(x + 2.3, 6.3, z + 6.1);
+      gazeGoal.set(x, 1.1, z - .4);
     }
-    const blend = dt === 0 || reducedMotion.matches ? 1 : 1 - Math.exp(-dt * (overview ? 4.8 : 5.2));
+    const intro = performance.now() < introEnd;
+    const rate = intro ? 1.3 : overview ? 4.8 : 5.2;
+    const blend = (dt === 0 && !intro) || reducedMotion.matches ? 1 : 1 - Math.exp(-dt * rate);
     camera.position.lerp(cameraGoal, blend);
     gaze.lerp(gazeGoal, blend);
     camera.lookAt(gaze);
@@ -389,7 +417,8 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
       const [x, z] = trail[point];
       return Math.hypot(x - player.position.x, z - player.position.z) < 1.45;
     });
-    if (nearby >= 0 && (selectedStop < 0 || nearby === selectedStop)) showExhibit(nearby);
+    // While walking to a chosen stop, exhibits passed on the way stay closed.
+    if (inspecting < 0) showExhibit(nearby >= 0 && (selectedStop < 0 || nearby === selectedStop) ? nearby : -1);
     const atStart = Math.hypot(player.position.x - trail[0][0], player.position.z - trail[0][1]) < 1.5;
     const place = exhibits[inspecting]?.title ?? exhibits[nearby]?.title ?? (atStart ? "Lab entrance" : "Inside the lab");
     if (locationLabel.textContent !== place) locationLabel.textContent = place;
@@ -415,10 +444,12 @@ function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
     status.hidden = true;
   });
 
+  if (new URLSearchParams(location.search).has("debug")) window.labDebug = { camera, gaze, player };
   let lastFrame = performance.now();
   render(0);
   renderer.setAnimationLoop((now) => {
-    const dt = Math.min(.04, (now - lastFrame) / 1000);
+    // The first frame's timestamp can come before lastFrame; a negative step would run motion backwards.
+    const dt = T.MathUtils.clamp((now - lastFrame) / 1000, 0, .04);
     lastFrame = now;
     if (!interrupted) render(dt);
   });

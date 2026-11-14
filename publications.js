@@ -15,3 +15,6 @@ export const publications = fetch(new URL("./classic.html", import.meta.url))
     });
   })
   .catch(() => []);
+
+export const whiteboardPapers = publications.then((papers) =>
+  papers.length ? [papers.at(-1), ...papers.slice(0, -1)] : []);
