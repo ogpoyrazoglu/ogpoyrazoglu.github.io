@@ -1,28 +1,28 @@
 const exhibits = [
   {
-    title: "Harbor", type: "Marine robotics",
-    text: "An autonomous surface vessel follows waypoints with wind and currents pushing it off course. Paths need room for safe turns and clearance around the dock.",
+    title: "Whiteboard", type: "Motion planning",
+    text: "The sketch shows a robot sampling paths around obstacles. It checks which paths have enough clearance, starts along one, and replans as it moves.",
+    link: ["See the C-Uniform project", "https://ogpoyrazoglu.github.io/cuniform_sampling/"]
+  },
+  {
+    title: "Autonomous boat", type: "Marine robotics",
+    text: "The boat on the bench represents an autonomous surface vessel. On the water it follows waypoints while accounting for wind, currents, and room to turn.",
     link: ["Browse motion-planning research", "./#research"]
   },
   {
-    title: "Rover yard", type: "Mobile land robotics",
-    text: "A wheeled rover has to plan paths it can actually drive. My C-Uniform research explores how to sample the rover’s reachable configurations, including paths around obstacles.",
+    title: "Drone", type: "Aerial robotics",
+    text: "This quadrotor has four rotors. Its planner looks for a clear path in three dimensions while its controller keeps the aircraft stable.",
+    link: ["Browse motion-planning research", "./#research"]
+  },
+  {
+    title: "Mobile land robots", type: "Ground robotics",
+    text: "A wheeled rover and a tracked robot sit in the test area. Each platform can make different turns and needs a planner that samples motions it can actually execute.",
     link: ["Explore C-Uniform sampling", "https://ogpoyrazoglu.github.io/cuniform_sampling/"]
-  },
-  {
-    title: "Drone pad", type: "Aerial robotics",
-    text: "A quadrotor can route above or around an obstacle. Its planner needs clearance in three dimensions while the controller keeps the aircraft stable.",
-    link: ["Browse motion-planning research", "./#research"]
-  },
-  {
-    title: "Legged-robot trail", type: "Legged robotics",
-    text: "On uneven terrain, a legged robot plans both where to go and where to put its feet. A clear route still needs stable footholds.",
-    link: ["Browse motion-planning research", "./#research"]
   }
 ];
 const home = {
-  title: "Trailhead", type: "Field guide",
-  text: "Follow the road from the harbor to the foothills. Each stop introduces a different kind of robot.",
+  title: "Lab entrance", type: "Lab tour",
+  text: "Start at the whiteboard, then visit the boat bench, the drone, and the mobile robot test area.",
   link: ["See my research", "./#research"]
 };
 const canvas = document.querySelector("#map");
@@ -38,7 +38,7 @@ const resetButton = document.querySelector("#reset");
 const pad = [...document.querySelectorAll("[data-direction]")];
 const stops = [...document.querySelectorAll("[data-stop]")];
 let current = -1;
-let driveToStop = () => {};
+let walkToStop = () => {};
 let markers = [];
 
 function showExhibit(index) {
@@ -61,7 +61,7 @@ function showExhibit(index) {
 stops.forEach((button, index) => {
   button.addEventListener("click", () => {
     showExhibit(index);
-    driveToStop(index);
+    walkToStop(index);
   });
 });
 
@@ -70,26 +70,28 @@ async function start() {
     const world = await import("./world-scene.js");
     const context = canvas.getContext("webgl2", { antialias: true });
     if (!context) throw new Error("WebGL 2 is unavailable");
-    startDriving(world, context);
+    startLab(world, context);
     status.hidden = true;
     for (const button of [cameraButton, resetButton, ...pad]) button.disabled = false;
   } catch (error) {
-    console.warn("3D field station unavailable", error);
+    console.warn("3D robotics lab unavailable", error);
     status.textContent = "The 3D scene couldn’t load. You can still browse the exhibits using the stop list.";
   }
 }
 
-function startDriving({ T, trail, buildWorld, canDrive }, context) {
-  const { scene, player, shadow, vessel, aircraft, beacons } = buildWorld();
+function startLab({ T, trail, buildWorld, canWalk, routeTo }, context) {
+  const { scene, player, shadow, walk, beacons } = buildWorld();
   const renderer = new T.WebGLRenderer({ canvas, context, antialias: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65));
   renderer.toneMapping = T.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
-  const camera = new T.PerspectiveCamera(44, 1, .1, 180);
+  const camera = new T.PerspectiveCamera(39, 1, .1, 100);
   const cameraGoal = new T.Vector3();
   const gaze = new T.Vector3();
   const gazeGoal = new T.Vector3();
   const projection = new T.Vector3();
+  const screenRight = new T.Vector2(.937, -.349).normalize();
+  const screenDown = new T.Vector2(-screenRight.y, screenRight.x);
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const held = new Map();
   const keyDirection = {
@@ -101,13 +103,12 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
     lengths.push(lengths[i - 1] + Math.hypot(trail[i][0] - trail[i - 1][0], trail[i][1] - trail[i - 1][1]));
   }
   const end = lengths.at(-1);
-  let overview = false;
+  let overview = true;
   let heading = 0;
-  let speed = 0;
   let progress = 0;
   let target = 0;
   let touring = false;
-  let approach = null;
+  let approach = [];
   let selectedStop = -1;
   let interrupted = false;
 
@@ -132,9 +133,9 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
     return [T.MathUtils.lerp(x, trail[next][0], fraction), T.MathUtils.lerp(z, trail[next][1], fraction)];
   }
 
-  function nearestRoad() {
+  function nearestTrail() {
     let closest = Infinity;
-    let roadPosition = progress;
+    let trailPosition = progress;
     for (let i = 1; i < trail.length; i++) {
       const [x, z] = trail[i - 1];
       const dx = trail[i][0] - x;
@@ -142,12 +143,12 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
       const fraction = T.MathUtils.clamp(((player.position.x - x) * dx + (player.position.z - z) * dz) / (dx * dx + dz * dz), 0, 1);
       const separation = Math.hypot(player.position.x - x - dx * fraction, player.position.z - z - dz * fraction);
       const candidate = T.MathUtils.lerp(lengths[i - 1], lengths[i], fraction);
-      if (separation + .001 < closest || (Math.abs(separation - closest) < .001 && Math.abs(candidate - progress) < Math.abs(roadPosition - progress))) {
+      if (separation + .001 < closest || (Math.abs(separation - closest) < .001 && Math.abs(candidate - progress) < Math.abs(trailPosition - progress))) {
         closest = separation;
-        roadPosition = candidate;
+        trailPosition = candidate;
       }
     }
-    return roadPosition;
+    return trailPosition;
   }
 
   function setPosition(x, z) {
@@ -159,29 +160,29 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
 
   function tourTo(distance) {
     if (!touring) {
-      progress = nearestRoad();
-      approach = pointAt(progress);
+      progress = nearestTrail();
+      approach = routeTo([player.position.x, player.position.z], pointAt(progress));
+      if (!approach.length) return;
     }
     held.clear();
-    speed = 0;
     target = distance;
     touring = true;
     if (reducedMotion.matches) {
       setPosition(...pointAt(distance));
       progress = distance;
-      approach = null;
+      approach = [];
     }
   }
 
-  driveToStop = (i) => {
+  walkToStop = (i) => {
     selectedStop = i;
     tourTo(lengths[beacons[i].point]);
   };
 
-  function steer(direction, key) {
+  function move(direction, key) {
     held.set(key, direction);
     touring = false;
-    approach = null;
+    approach = [];
     selectedStop = -1;
   }
 
@@ -190,7 +191,7 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
     const key = event.key.toLowerCase();
     if (!keyDirection[key] || interrupted) return;
     event.preventDefault();
-    steer(keyDirection[key], key);
+    move(keyDirection[key], key);
   });
   window.addEventListener("keyup", (event) => held.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => held.clear());
@@ -200,9 +201,9 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
   frame.addEventListener("wheel", (event) => {
     if (interrupted || event.ctrlKey || event.metaKey) return;
     const delta = event.deltaY || event.deltaX;
-    const base = touring ? target : nearestRoad();
+    const base = touring ? target : nearestTrail();
     const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 160 : 1;
-    const destination = T.MathUtils.clamp(base + delta * scale * .095, 0, end);
+    const destination = T.MathUtils.clamp(base + delta * scale * .05, 0, end);
     if (base === destination) return;
     event.preventDefault();
     selectedStop = -1;
@@ -211,31 +212,35 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
   for (const button of pad) {
     const direction = button.dataset.direction;
     const key = `touch-${direction}`;
+    let started = 0;
+    let releaseTimer;
     button.addEventListener("pointerdown", (event) => {
+      window.clearTimeout(releaseTimer);
+      started = performance.now();
       button.setPointerCapture(event.pointerId);
-      steer(direction, key);
+      move(direction, key);
     });
     button.addEventListener("lostpointercapture", () => held.delete(key));
     button.addEventListener("click", (event) => {
-      if (event.detail !== 0) return;
-      steer(direction, key);
-      window.setTimeout(() => held.delete(key), 155);
+      if (event.detail !== 0 && performance.now() - started > 130) return;
+      window.clearTimeout(releaseTimer);
+      move(direction, key);
+      releaseTimer = window.setTimeout(() => held.delete(key), 145);
     });
   }
 
   cameraButton.addEventListener("click", () => {
     overview = !overview;
-    cameraButton.setAttribute("aria-pressed", String(overview));
-    cameraButton.textContent = overview ? "Chase camera" : "Overview";
+    cameraButton.setAttribute("aria-pressed", String(!overview));
+    cameraButton.textContent = overview ? "Follow camera" : "Lab overview";
   });
   function reset() {
     held.clear();
-    speed = 0;
     heading = 0;
     target = 0;
     progress = 0;
     touring = false;
-    approach = null;
+    approach = [];
     selectedStop = -1;
     player.position.set(trail[0][0], 0, trail[0][1]);
     showExhibit(-1);
@@ -254,52 +259,43 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
   new ResizeObserver(resize).observe(frame);
   resize();
 
-  function animateDrive(dt) {
-    if (touring && approach) {
-      const [x, z] = approach;
+  function animateWalk(dt) {
+    if (touring && approach.length) {
+      const [x, z] = approach[0];
       const remaining = Math.hypot(x - player.position.x, z - player.position.z);
-      const t = remaining ? Math.min(1, dt * 13 / remaining) : 1;
-      const nextX = T.MathUtils.lerp(player.position.x, x, t);
-      const nextZ = T.MathUtils.lerp(player.position.z, z, t);
-      if (!canDrive(nextX, nextZ)) {
-        setPosition(x, z);
-        approach = null;
-        return;
-      }
-      setPosition(nextX, nextZ);
-      if (t === 1) approach = null;
+      const t = remaining ? Math.min(1, dt * 4.8 / remaining) : 1;
+      setPosition(T.MathUtils.lerp(player.position.x, x, t), T.MathUtils.lerp(player.position.z, z, t));
+      if (t === 1) approach.shift();
       return;
     }
     if (touring) {
-      progress += T.MathUtils.clamp(target - progress, -dt * 19, dt * 19);
+      progress += T.MathUtils.clamp(target - progress, -dt * 4.8, dt * 4.8);
       setPosition(...pointAt(progress));
+      if (progress === target && selectedStop >= 0) heading = beacons[selectedStop].facing;
       return;
     }
     const pressed = [...held.values()];
-    const throttle = Number(pressed.includes("up")) - Number(pressed.includes("down"));
-    const turn = Number(pressed.includes("left")) - Number(pressed.includes("right"));
-    speed = T.MathUtils.damp(speed, throttle * (throttle < 0 ? 5.5 : 12.5), throttle ? 4.8 : 7, dt);
-    if (Math.abs(speed) < .012) speed = 0;
-    heading += turn * dt * 1.75 * (speed < -.05 ? -1 : 1);
-    const dx = -Math.sin(heading) * speed * dt;
-    const dz = -Math.cos(heading) * speed * dt;
-    if (canDrive(player.position.x + dx, player.position.z)) player.position.x += dx;
-    if (canDrive(player.position.x, player.position.z + dz)) player.position.z += dz;
+    const horizontal = Number(pressed.includes("right")) - Number(pressed.includes("left"));
+    const vertical = Number(pressed.includes("down")) - Number(pressed.includes("up"));
+    if (!horizontal && !vertical) return;
+    const step = 4.5 * dt / Math.hypot(horizontal, vertical);
+    const dx = (horizontal * screenRight.x + vertical * screenDown.x) * step;
+    const dz = (horizontal * screenRight.y + vertical * screenDown.y) * step;
+    heading = Math.atan2(-dx, -dz);
+    if (canWalk(player.position.x + dx, player.position.z)) player.position.x += dx;
+    if (canWalk(player.position.x, player.position.z + dz)) player.position.z += dz;
   }
 
   function aimCamera(dt) {
     if (overview) {
-      const distance = Math.max(1, 1.35 / camera.aspect);
-      cameraGoal.set(25 * distance, 59 * distance, 51 * distance);
-      gazeGoal.set(0, 0, -4);
+      const distance = Math.max(1, 1.39 / camera.aspect);
+      cameraGoal.set(9.2 * distance, 18.5 * distance, 24.7 * distance);
+      gazeGoal.set(0, .8, -.2);
     } else {
       const x = player.position.x;
       const z = player.position.z;
-      const backX = Math.sin(heading);
-      const backZ = Math.cos(heading);
-      const side = backZ * 3.25;
-      cameraGoal.set(x + backX * 9.4 + side, 6.7, z + backZ * 9.4 - backX * 3.25);
-      gazeGoal.set(x - backX * 4.7, .7, z - backZ * 4.7);
+      cameraGoal.set(x + 2.65, 7.4, z + 7.11);
+      gazeGoal.set(x, 1, z - .5);
     }
     const blend = dt === 0 || reducedMotion.matches ? 1 : 1 - Math.exp(-dt * (overview ? 4.8 : 5.2));
     camera.position.lerp(cameraGoal, blend);
@@ -311,9 +307,8 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
   function updateMarkers() {
     const w = frame.clientWidth;
     const h = frame.clientHeight;
-    beacons.forEach(({ base }, i) => {
-      projection.copy(base.position);
-      projection.y = 2.7;
+    beacons.forEach(({ position }, i) => {
+      projection.copy(position);
       projection.project(camera);
       const left = (projection.x + 1) * w / 2;
       const top = (1 - projection.y) * h / 2;
@@ -323,25 +318,22 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
     });
   }
 
-  function render(now, dt) {
-    animateDrive(dt);
+  function render(dt) {
+    const oldX = player.position.x;
+    const oldZ = player.position.z;
+    animateWalk(dt);
     const nearby = beacons.findIndex(({ point }) => {
       const [x, z] = trail[point];
-      return Math.hypot(x - player.position.x, z - player.position.z) < 3;
+      return Math.hypot(x - player.position.x, z - player.position.z) < 1.45;
     });
     if (nearby >= 0 && (selectedStop < 0 || nearby === selectedStop)) showExhibit(nearby);
-    const atStart = Math.hypot(player.position.x - trail[0][0], player.position.z - trail[0][1]) < 3;
-    const place = exhibits[nearby]?.title ?? (atStart ? "Trailhead" : "On the road");
+    const atStart = Math.hypot(player.position.x - trail[0][0], player.position.z - trail[0][1]) < 1.5;
+    const place = exhibits[nearby]?.title ?? (atStart ? "Lab entrance" : "Inside the lab");
     if (locationLabel.textContent !== place) locationLabel.textContent = place;
     player.rotation.y = heading;
     shadow.position.x = player.position.x;
     shadow.position.z = player.position.z;
-    shadow.rotation.y = heading;
-    const time = reducedMotion.matches ? 0 : now / 1000;
-    vessel.position.y = -.26 + Math.sin(time * 1.4) * .09;
-    vessel.rotation.z = Math.sin(time * 1.2) * .035;
-    aircraft.craft.position.y = 2.55 + Math.sin(time * 1.4) * .22;
-    aircraft.rotors.forEach((rotor, i) => { rotor.rotation.y = time * (i % 2 ? 19 : -19); });
+    walk(Math.hypot(player.position.x - oldX, player.position.z - oldZ), dt, reducedMotion.matches);
     aimCamera(dt);
     updateMarkers();
     renderer.render(scene, camera);
@@ -360,11 +352,11 @@ function startDriving({ T, trail, buildWorld, canDrive }, context) {
   });
 
   let lastFrame = performance.now();
-  render(lastFrame, 0);
+  render(0);
   renderer.setAnimationLoop((now) => {
     const dt = Math.min(.04, (now - lastFrame) / 1000);
     lastFrame = now;
-    if (!interrupted) render(now, dt);
+    if (!interrupted) render(dt);
   });
 }
 

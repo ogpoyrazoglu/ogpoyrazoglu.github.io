@@ -51,7 +51,7 @@ button:disabled { cursor: default; opacity: .55; }
 .map-actions { display: flex; gap: .5rem; }
 .map-header button { min-height: 44px; padding: 0 .3rem; color: var(--accent); border: 0; background: transparent; font-size: .78rem; font-weight: 650; }
 .map-header button:hover:not(:disabled) { text-decoration: underline; }
-.map-frame { position: relative; height: clamp(290px, 53vh, 630px); overflow: hidden; isolation: isolate; background: #c7d9bb; }
+.map-frame { position: relative; height: clamp(320px, 57vh, 650px); overflow: hidden; isolation: isolate; background: #cfdad4; }
 .map-frame canvas { display: block; width: 100%; height: 100%; }
 .map-frame canvas:focus-visible { outline-offset: -4px; }
 #scene-status, .no-script { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); padding: .8rem 1rem; width: min(85%, 26rem); text-align: center; border-radius: 4px; background: var(--panel); }
@@ -74,9 +74,10 @@ kbd { display: inline-block; border: 1px solid var(--line); border-radius: 3px; 
 .stops button { display: flex; align-items: center; gap: .65rem; min-height: 44px; padding-inline: .6rem; border: 0; border-radius: 4px; background: none; color: var(--ink); text-align: left; font-size: .87rem; }
 .stops button:hover, .stops button[aria-current="location"] { background: #dfe8d5; }
 .stop-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #6f8e53; }
-.stop-dot.harbor { background: #3e8d83; }
-.stop-dot.rover { background: #ac7626; }
+.stop-dot.whiteboard { background: #3e8d83; }
+.stop-dot.boat { background: #407588; }
 .stop-dot.drone { background: #ad5f49; }
+.stop-dot.robots { background: #ac7626; }
 .footer { margin-top: 1.25rem; padding-block: .75rem; border-top: 1px solid var(--line); color: var(--muted); }
 @keyframes enter {
   from { opacity: 0; transform: translateY(5px); }
