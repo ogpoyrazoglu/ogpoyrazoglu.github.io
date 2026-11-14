@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Drive an OGP rover through four robotics exhibits in a 3D field station.">
+  <meta name="theme-color" content="#e9ebd9">
+  <meta property="og:title" content="Robotics field station · OGP">
+  <meta property="og:description" content="Drive through a 3D world with a harbor, rover yard, drone pad, and legged-robot trail.">
+  <link rel="canonical" href="https://ogpoyrazoglu.github.io/world.html">
+  <link rel="icon" href="assets/ogp.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="world.css">
+  <script src="world.js" type="module"></script>
+  <title>Robotics field station · OGP</title>
+</head>
+<body class="world">
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="wrap world-wrap">
+    <header class="masthead">
+      <a class="brand" href="./" aria-label="OGP home"><img src="assets/ogp-mark.svg" width="72" height="38" alt=""></a>
+      <nav aria-label="Main navigation">
+        <a href="./">← Classic website</a>
+      </nav>
+    </header>
+    <main id="main">
+      <div class="world-intro">
+        <h1>Robotics field station</h1>
+        <p>Drive the OGP rover or scroll over the scene to follow the exhibit route.</p>
+      </div>
+      <div class="world-layout">
+        <section class="map-panel" aria-label="Interactive 3D field station">
+          <div class="map-header">
+            <span class="map-location"><span class="status-light" aria-hidden="true"></span><span id="map-location">Trailhead</span></span>
+            <div class="map-actions">
+              <button id="camera" type="button" aria-pressed="false" disabled>Overview</button>
+              <button id="reset" type="button" disabled>Reset rover</button>
+            </div>
+          </div>
+          <div class="map-frame">
+            <canvas id="map" tabindex="0" aria-label="3D field station" aria-describedby="map-help"></canvas>
+            <div id="map-markers"></div>
+            <p id="scene-status" role="status">Loading the field station…</p>
+            <noscript><p class="no-script">Enable JavaScript to drive the rover.</p></noscript>
+          </div>
+          <div class="map-controls">
+            <p id="map-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys to steer. Select a stop to drive there.</p>
+            <div class="dpad" aria-label="Drive the rover" role="group">
+              <button type="button" data-direction="up" aria-label="Drive forward" disabled>↑</button>
+              <button type="button" data-direction="left" aria-label="Turn left" disabled>←</button>
+              <button type="button" data-direction="down" aria-label="Reverse" disabled>↓</button>
+              <button type="button" data-direction="right" aria-label="Turn right" disabled>→</button>
+            </div>
+          </div>
+        </section>
+        <aside class="exhibit" aria-labelledby="exhibit-title">
+          <div class="exhibit-body" aria-live="polite">
+            <p class="exhibit-type" id="exhibit-type">Field guide</p>
+            <h2 id="exhibit-title">Trailhead</h2>
+            <p id="exhibit-copy">Follow the road from the harbor to the foothills. Each stop introduces a different kind of robot.</p>
+            <a id="exhibit-link" href="./#research">See my research <span aria-hidden="true">↗</span></a>
+          </div>
+          <nav class="stops" aria-label="Exhibit stops">
+            <button type="button" data-stop="0"><span class="stop-dot harbor"></span>Harbor</button>
+            <button type="button" data-stop="1"><span class="stop-dot rover"></span>Rover yard</button>
+            <button type="button" data-stop="2"><span class="stop-dot drone"></span>Drone pad</button>
+            <button type="button" data-stop="3"><span class="stop-dot trail"></span>Legged-robot trail</button>
+          </nav>
+        </aside>
+      </div>
+    </main>
+    <footer class="footer">
+      <a class="brand brand-small" href="./" aria-label="OGP home"><img src="assets/ogp-mark.svg" width="56" height="30" alt=""></a>
+      <small>O. Goktug Poyrazoglu</small>
+    </footer>
+  </div>
+</body>
+</html>
