@@ -70,6 +70,9 @@ kbd { display: inline-block; border: 1px solid var(--line); border-radius: 3px; 
 .exhibit h2 { margin-block: .3rem .55rem; font: 400 2.7rem/.98 var(--display); }
 .exhibit-body > p:not(.exhibit-type) { color: var(--muted); font-size: .9rem; }
 .exhibit-body a { display: inline-flex; align-items: center; min-height: 44px; gap: .25rem; font-size: .82rem; font-weight: 650; }
+#publication-links { margin: .55rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+#publication-links li { border-bottom: 1px solid var(--line); }
+#publication-links a { display: flex; padding-block: .55rem; line-height: 1.35; }
 #inspect-exhibit { display: block; min-height: 44px; margin: .15rem 0 .4rem; padding: .35rem .7rem; border: 1px solid var(--line); border-radius: 4px; color: var(--accent); background: #e7ece0; font-size: .82rem; font-weight: 650; }
 #inspect-exhibit:hover { background: #dce7d6; }
 .stops { display: grid; border-top: 1px solid var(--line); padding: .35rem; }

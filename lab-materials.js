@@ -89,24 +89,6 @@ export function wood() {
   return new T.MeshStandardMaterial({ map, roughness: .54, bumpMap: map, bumpScale: .014 });
 }
 
-export function carbonFiber() {
-  const map = texture(128, 128, (ctx) => {
-    ctx.fillStyle = "#1f2225";
-    ctx.fillRect(0, 0, 128, 128);
-    for (let y = 0; y < 128; y += 8) for (let x = 0; x < 128; x += 8) {
-      const horizontal = (x / 8 + y / 8) % 4 < 2;
-      ctx.fillStyle = horizontal ? "#2b2e32" : "#24262a";
-      ctx.fillRect(x, y, 8, 8);
-      ctx.fillStyle = "#16191a";
-      for (let offset = 1; offset < 8; offset += 2) {
-        ctx.fillRect(x + (horizontal ? 0 : offset), y + (horizontal ? offset : 0),
-          horizontal ? 8 : 1, horizontal ? 1 : 8);
-      }
-    }
-  });
-  return new T.MeshStandardMaterial({ map, roughness: .36, metalness: .26 });
-}
-
 export function softShadow(parent, x, z, width, depth, opacity, y = .022) {
   const shadowMap = softShadow.map ??= texture(128, 128, (ctx) => {
     const gradient = ctx.createRadialGradient(64, 64, 7, 64, 64, 63);

@@ -1,6 +1,9 @@
 import * as T from "./assets/three/three.module.min.js";
 import { blueBoat } from "./blueboat.js";
-import { carbonFiber, concrete, lightLab, material, softShadow, wood } from "./lab-materials.js";
+import { f1tenthRacer } from "./f1tenth.js";
+import { concrete, lightLab, material, softShadow, wood } from "./lab-materials.js";
+import { skydioF10 } from "./skydio-f10.js";
+import { publications } from "./publications.js";
 
 export { T };
 export const trail = [
@@ -11,8 +14,8 @@ export const trail = [
 const stops = [
   { point: 3, facing: 0, marker: [-7.35, 3.82, -7], focus: [-7.1, 2.63, -7], view: [.2, .6, 9.5] },
   { point: 5, facing: Math.PI / 2, marker: [-7, 3.3, .25], focus: [-6.86, 1.65, .87], view: [2.65, 2.05, 3.2] },
-  { point: 7, facing: -Math.PI / 2, marker: [6.4, 3.37, -4.35], focus: [6.23, 1.49, -4.42], view: [2.3, 2.7, 4.1] },
-  { point: 8, facing: -Math.PI / 2, marker: [6.8, 2.9, 1.8], focus: [6.95, .57, 1.93], view: [2.6, 3.2, 5.25] }
+  { point: 7, facing: -Math.PI / 2, marker: [6.4, 3.37, -4.35], focus: [6.42, 1.47, -4.36], view: [1.9, 3.25, 2.9] },
+  { point: 8, facing: -Math.PI / 2, marker: [6.8, 2.9, 1.8], focus: [6.73, .44, 2.05], view: [1.52, 2.6, 3.05] }
 ];
 const roomWidth = 22;
 const roomDepth = 15;
@@ -26,9 +29,7 @@ const materials = new Map();
 const boxGeometry = new T.BoxGeometry();
 const cylinderGeometry = new T.CylinderGeometry(.5, .5, 1, 20);
 const sphereGeometry = new T.SphereGeometry(1, 12, 9);
-const brushedMetal = material(0x919a9f, .38, .73);
 const darkMetal = material(0x252c33, .43, .58);
-const glass = new T.MeshPhysicalMaterial({ color: 0x23394c, roughness: .15, clearcoat: .78 });
 
 const obstacles = [
   [-9.3, -4.9, -6.9, -5.6],  // Whiteboard cabinet
@@ -143,38 +144,56 @@ function label(parent, text, x, y, z, w, h, color = "#324951") {
 
 function whiteboard(scene) {
   box(scene, ink, -7.1, 2.63, -7.19, 6.5, 2.62, .15);
-  panel(scene, -7.1, 2.63, -7.101, 6.26, 2.4, (ctx, width, height) => {
+  const board = panel(scene, -7.1, 2.63, -7.101, 6.26, 2.4, (ctx, width, height) => {
     ctx.fillStyle = "#f5f2e7";
     ctx.fillRect(0, 0, width, height);
     ctx.fillStyle = "#245d62";
-    ctx.font = "italic 600 42px Georgia";
-    ctx.fillText("Motion planning", 42, 62);
-    ctx.strokeStyle = "#64a39a";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(45, 76);
-    ctx.quadraticCurveTo(184, 70, 347, 77);
-    ctx.stroke();
-    ctx.strokeStyle = "#b2bfc0";
-    ctx.strokeRect(65, 116, 378, 132);
-    ctx.fillStyle = "#83a6a4";
-    ctx.fillRect(192, 116, 52, 77);
-    ctx.fillRect(308, 186, 45, 62);
-    for (const [i, color] of ["#376d85", "#cc7556", "#76a99f", "#879c8f"].entries()) {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(87, 223);
-      ctx.bezierCurveTo(167, 249 - i * 18, 270, 177 + i * 6, 404, 140 + i * 12);
-      ctx.stroke();
+    ctx.font = "italic 700 37px Georgia";
+    ctx.fillText("Selected publications", 26, 53);
+    ctx.fillStyle = "#6a9589";
+    ctx.fillRect(26, 63, width - 52, 2);
+  });
+  const map = board.material.map;
+  const ctx = map.image.getContext("2d");
+  publications.then((papers) => {
+    if (!papers.length) {
+      ctx.font = "20px sans-serif";
+      ctx.fillText("Browse the papers from the lab guide.", 26, 107);
+      map.needsUpdate = true;
+      return;
     }
-    ctx.fillStyle = "#294e5c";
-    ctx.font = "italic 27px Georgia";
-    ctx.fillText("sample paths", 490, 131);
-    ctx.fillText("check clearance", 490, 174);
-    ctx.fillText("apply & replan", 490, 217);
-    ctx.fillStyle = "#eac37d";
-    ctx.fillRect(677, 42, 49, 48);
+    for (const [index, paper] of papers.slice(0, 4).entries()) {
+      const x = 26 + (index % 2) * 365;
+      const y = 81 + Math.floor(index / 2) * 103;
+      ctx.fillStyle = "#e5e9e2";
+      ctx.fillRect(x, y, 81, 84);
+      ctx.fillStyle = "#28676b";
+      ctx.font = "700 14px sans-serif";
+      ctx.fillText(paper.venue.toUpperCase(), x + 92, y + 12);
+      ctx.fillStyle = "#293d43";
+      ctx.font = "600 16px sans-serif";
+      let line = "";
+      let baseline = y + 34;
+      for (const word of paper.title.split(/\s+/)) {
+        const next = [line, word].filter(Boolean).join(" ");
+        if (line && ctx.measureText(next).width > 251) {
+          ctx.fillText(line, x + 92, baseline);
+          baseline += 16;
+          line = word;
+        } else line = next;
+      }
+      ctx.fillText(line, x + 92, baseline);
+      const image = new Image();
+      image.addEventListener("load", () => {
+        const ratio = Math.min(73 / image.width, 76 / image.height);
+        const w = image.width * ratio;
+        const h = image.height * ratio;
+        ctx.drawImage(image, x + (81 - w) / 2, y + (84 - h) / 2, w, h);
+        map.needsUpdate = true;
+      }, { once: true });
+      image.src = paper.figure;
+    }
+    map.needsUpdate = true;
   });
   box(scene, 0x6d898d, -7.1, 1.28, -7, 6.4, .08, .29);
   box(scene, teal, -6.14, 1.349, -6.99, .36, .06, .06).rotation.y = -.13;
@@ -211,65 +230,6 @@ function workbench(scene, x, z, w, d, tag, color, worktop) {
 function crate(parent, color, x, y, z, w, h, d) {
   box(parent, color, x, y + h / 2, z, w, h, d);
   box(parent, ink, x, y + h * .75, z + d / 2 + .005, w * .35, .05, .015);
-}
-
-function drone(scene) {
-  const craft = group(scene, 6.23, 1.6, -4.42);
-  const carbon = carbonFiber();
-  const shell = new T.MeshPhysicalMaterial({ color: 0x4f626c, roughness: .38, clearcoat: .4 });
-  craft.rotation.y = -.15;
-  round(craft, shell, 0, .052, -.042, .395, .147, .48);
-  box(craft, carbon, 0, -.035, 0, .79, .082, .74);
-  box(craft, rust, 0, .183, .072, .32, .02, .25);
-  box(craft, brushedMetal, 0, -.12, .29, .38, .12, .41);
-  round(craft, darkMetal, 0, -.157, -.414, .172, .113, .11);
-  const lens = cylinder(craft, glass, 0, -.156, -.511, .139, .041);
-  lens.rotation.x = Math.PI / 2;
-  for (const angle of [-Math.PI / 4, Math.PI / 4]) box(craft, carbon, 0, -.003, 0, .125, .085, 2.65).rotation.y = angle;
-  for (const x of [-.9, .9]) for (const z of [-.9, .9]) {
-    cylinder(craft, darkMetal, x, .07, z, .26, .18);
-    cylinder(craft, brushedMetal, x, .167, z, .171, .041);
-    for (const side of [-1, 1]) {
-      const blade = round(craft, z > 0 ? darkMetal : blue, x + side * .206, .207, z + side * .06, .253, .017, .047);
-      blade.rotation.y = -.282;
-      blade.rotation.z = side * .045;
-    }
-    cylinder(craft, brushedMetal, x, .229, z, .076, .048);
-  }
-  for (const x of [-.32, .32]) {
-    box(craft, ink, x, -.23, 0, .08, .19, .36);
-    box(craft, ink, x, -.34, 0, .08, .06, .57);
-  }
-  cylinder(scene, ink, 6.23, 1.22, -4.42, 2.8, .11);
-  const ring = new T.Mesh(new T.RingGeometry(1.18, 1.24, 40), new T.MeshBasicMaterial({ color: 0xeee2bd }));
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.set(6.23, 1.28, -4.42);
-  scene.add(ring);
-}
-
-function mobileRobot(scene, x, z, color, angle, wide = false) {
-  const robot = group(scene, x, 0, z);
-  robot.rotation.y = angle;
-  box(robot, ink, 0, .27, 0, 1.05, .24, 1.65);
-  box(robot, color, 0, .45, 0, 1.05, .17, 1.58);
-  box(robot, brushedMetal, 0, .66, .17, .68, .25, .68);
-  box(robot, ink, 0, .81, -.05, .08, .24, .075);
-  cylinder(robot, darkMetal, 0, .96, -.05, .37, .14);
-  cylinder(robot, glass, 0, .985, -.05, .379, .05);
-  cylinder(robot, brushedMetal, 0, 1.045, -.05, .336, .035);
-  box(robot, glass, 0, .43, -.799, .55, .09, .045);
-  for (const x of [-.21, .21]) box(robot, 0xb3e7d3, x, .43, -.825, .068, .042, .01);
-  for (const z of [-.31, -.22, -.13, -.04, .05]) box(robot, ink, -.29, .792, z + .24, .215, .015, .023);
-  for (const dx of [-.56, .56]) {
-    for (const dz of [-.55, .56]) {
-      cylinder(robot, ink, dx, .24, dz, .48, wide ? .28 : .2).rotation.z = Math.PI / 2;
-      cylinder(robot, brushedMetal, dx * 1.25, .24, dz, .22, .07).rotation.z = Math.PI / 2;
-    }
-    if (wide) {
-      box(robot, ink, dx, .22, 0, .29, .33, 1);
-      for (let segment = -5; segment <= 5; segment++) box(robot, darkMetal, dx, .39, segment * .103, .306, .035, .048);
-    }
-  }
 }
 
 function character(scene) {
@@ -389,20 +349,23 @@ export function buildWorld(renderer) {
   crate(boatBench, cream, 1.16, .47, .13, .6, .32, .65);
   softShadow(scene, -6.86, .87, 3.8, 2.13, .67, 1.167);
   blueBoat(scene);
-  const flightBench = workbench(scene, 6.55, -4.32, 4.2, 2.85, "AERIAL", 0xb86652, worktop);
+  const flightBench = workbench(scene, 6.55, -4.32, 4.2, 2.85, "F10 LIGHTRUNNER", 0x426b83, worktop);
   crate(flightBench, teal, 1.28, .47, .32, .9, .34, .73);
-  box(flightBench, darkMetal, 1.54, 1.19, -.78, .7, .064, .5);
-  box(flightBench, darkMetal, 1.54, 1.45, -.978, .7, .49, .047).rotation.x = -.16;
-  const laptopScreen = label(flightBench, "FLIGHT TEST", 1.54, 1.45, -.945, .62, .4, "#293f4f");
-  laptopScreen.rotation.x = -.16;
-  drone(scene);
+  box(flightBench, darkMetal, -.13, 1.192, -.04, 3.56, .064, 2.04);
+  for (const z of [-.425, .33]) {
+    box(flightBench, darkMetal, -.13 - z * .24, 1.31, -.04 + z, .33, .17, .18).rotation.y = -.24;
+    box(flightBench, ink, -.13 - z * .24, 1.405, -.04 + z, .26, .037, .15).rotation.y = -.24;
+  }
+  skydioF10(flightBench);
 
   box(scene, 0x557375, 6.95, .027, 1.93, 3.7, .048, 3.75);
   for (const x of [5.18, 8.72]) box(scene, 0xe5c47c, x, .053, 1.93, .052, .014, 3.57);
   for (const z of [.19, 3.67]) box(scene, 0xe5c47c, 6.95, .053, z, 3.56, .014, .052);
-  mobileRobot(scene, 6.03, 1.1, yellow, -.53);
-  mobileRobot(scene, 7.82, 2.63, rust, -2.17, true);
-  box(scene, cream, 8.24, .12, .61, .57, .17, .34);
+  f1tenthRacer(scene, 6.73, 2.05);
+  cylinder(scene, 0x898f90, 8.09, .27, .83, .72, .44);
+  cylinder(scene, 0xb4b8b5, 8.09, .497, .83, .70, .026);
+  cylinder(scene, 0x929794, 5.89, .23, .56, .55, .35);
+  cylinder(scene, 0xb8bdb8, 5.89, .411, .56, .53, .026);
 
   for (const [x, z, w, d] of [[-6.8, .9, 5.7, 3.65], [6.5, -4.3, 5.6, 3.7], [-7.1, -6.35, 5.5, 1.7], [9.6, -6.5, 2.9, 2.2], [-10.1, 5.1, 2.2, 4.6]]) {
     softShadow(scene, x, z, w, d, .56);

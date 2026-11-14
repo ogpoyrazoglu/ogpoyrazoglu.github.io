@@ -1,8 +1,10 @@
+import { publications } from "./publications.js";
+
 const exhibits = [
   {
-    title: "Whiteboard", type: "Motion planning",
-    text: "The sketch shows a robot sampling paths around obstacles. It checks which paths have enough clearance, starts along one, and replans as it moves.",
-    link: ["See the C-Uniform project", "https://ogpoyrazoglu.github.io/cuniform_sampling/"]
+    title: "Whiteboard", type: "Selected publications",
+    text: "Selected papers on trajectory sampling and model predictive control.",
+    link: ["Browse all selected research", "classic.html#research"]
   },
   {
     title: "BlueBoat", type: "Marine robotics",
@@ -10,20 +12,20 @@ const exhibits = [
     link: ["See the BlueBoat", "https://bluerobotics.com/store/boat/blueboat/blueboat/"]
   },
   {
-    title: "Drone", type: "Aerial robotics",
-    text: "This quadrotor has four rotors. Its planner looks for a clear path in three dimensions while its controller keeps the aircraft stable.",
-    link: ["Browse motion-planning research", "./#research"]
+    title: "Skydio F10 Lightrunner", type: "Aerial robotics",
+    text: "This model depicts Skydio’s fixed-wing F10 Lightrunner. Its SideEye camera sits at the wingtip to keep the airframe out of the shot during turns.",
+    link: ["See the Skydio F10", "https://www.skydio.com/f10"]
   },
   {
-    title: "Mobile land robots", type: "Ground robotics",
-    text: "A wheeled rover and a tracked robot sit in the test area. Each platform can make different turns and needs a planner that samples motions it can actually execute.",
-    link: ["Explore C-Uniform sampling", "https://ogpoyrazoglu.github.io/cuniform_sampling/"]
+    title: "F1TENTH racer", type: "Ground robotics",
+    text: "This open-chassis, one-tenth-scale racer is modeled after the car we used to test C-Uniform motion planning around indoor obstacles.",
+    link: ["See the C-Uniform experiments", "https://ogpoyrazoglu.github.io/cuniform_sampling/cuniform.html"]
   }
 ];
 const home = {
   title: "Lab entrance", type: "Lab tour",
-  text: "Start at the whiteboard, then visit the boat bench, the drone, and the mobile robot test area.",
-  link: ["See my research", "./#research"]
+  text: "Start at the publications whiteboard, then visit the BlueBoat, Skydio F10, and F1TENTH racer.",
+  link: ["See my research", "classic.html#research"]
 };
 const canvas = document.querySelector("#map");
 const frame = document.querySelector(".map-frame");
@@ -33,6 +35,7 @@ const title = document.querySelector("#exhibit-title");
 const type = document.querySelector("#exhibit-type");
 const copy = document.querySelector("#exhibit-copy");
 const link = document.querySelector("#exhibit-link");
+const paperLinks = document.querySelector("#publication-links");
 const cameraButton = document.querySelector("#camera");
 const resetButton = document.querySelector("#reset");
 const inspectButton = document.querySelector("#inspect-exhibit");
@@ -43,6 +46,18 @@ let walkToStop = () => {};
 let markers = [];
 let sceneReady = false;
 
+publications.then((papers) => {
+  for (const paper of papers) {
+    const item = document.createElement("li");
+    const anchor = document.createElement("a");
+    anchor.href = paper.href;
+    anchor.textContent = paper.title;
+    item.append(anchor);
+    paperLinks.append(item);
+  }
+  paperLinks.hidden = current !== 0 || !paperLinks.childElementCount;
+});
+
 function showExhibit(index) {
   if (current === index) return;
   current = index;
@@ -52,6 +67,7 @@ function showExhibit(index) {
   copy.textContent = item.text;
   link.firstChild.textContent = item.link[0] + " ";
   link.href = item.link[1];
+  paperLinks.hidden = index !== 0 || !paperLinks.childElementCount;
   inspectButton.hidden = !sceneReady || index < 0;
   stops.forEach((button, i) => {
     for (const control of [button, markers[i]].filter(Boolean)) {
