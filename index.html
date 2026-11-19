@@ -3,109 +3,109 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="O. Goktug Poyrazoglu’s personal site. Walk through the 3D robotics lab or browse the classic academic site.">
-  <meta name="theme-color" content="#f3f1e8">
+  <meta name="description" content="O. Goktug Poyrazoglu’s research on robot motion planning, trajectory sampling, and model predictive control.">
+  <meta name="theme-color" content="#ffffff">
   <meta property="og:title" content="O. Goktug Poyrazoglu">
-  <meta property="og:description" content="Explore the 3D robotics lab or browse my research and publications.">
+  <meta property="og:description" content="Robotics research and publications.">
   <meta property="og:image" content="https://ogpoyrazoglu.github.io/assets/portrait.jpg">
   <link rel="canonical" href="https://ogpoyrazoglu.github.io/">
   <link rel="icon" href="assets/ogp.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="welcome.css">
-  <script>
-    if (location.hash === "#research") location.replace("classic.html#research");
-    document.documentElement.classList.add("js");
-  </script>
-  <script src="welcome.js" type="module"></script>
-  <script src="welcome-avatar.js" type="module"></script>
+  <link rel="stylesheet" href="barron.css">
+  <link rel="stylesheet" href="classic.css">
   <title>O. Goktug Poyrazoglu</title>
 </head>
-<body data-side="center">
-  <div class="progress" aria-hidden="true"><span></span></div>
-  <header class="topbar">
-    <a class="mark" href="./" aria-label="OGP home"><img src="assets/ogp-mark.svg" width="72" height="38" alt=""></a>
-    <nav aria-label="Jump to a version of the site">
-      <a href="world.html">Robotics lab</a>
-      <a href="classic.html">Classic site</a>
-      <a href="blog.html">Blog</a>
-    </nav>
-  </header>
+<body class="classic" id="top">
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="page">
+    <header class="masthead">
+      <a class="brand" href="./" aria-label="OGP home"><img src="assets/ogp-mark.svg" width="72" height="38" alt=""></a>
+      <nav aria-label="Main navigation">
+        <a href="#research">Research</a>
+      </nav>
+    </header>
 
-  <!-- The avatar stays in the middle of the screen while the story scrolls past it. -->
-  <figure class="stage" data-state="loading">
-    <canvas class="avatar" role="img" aria-label="3D avatar of O. Goktug Poyrazoglu"></canvas>
-    <img class="portrait" src="assets/portrait.jpg" width="800" height="800" alt="O. Goktug Poyrazoglu">
-    <span class="avatar-loading" aria-hidden="true"></span>
-  </figure>
+    <main id="main">
+      <section class="bio" aria-labelledby="name">
+        <div class="bio-text">
+          <h1 id="name" class="name">O. Goktug Poyrazoglu</h1>
+          <p>I’m a Ph.D. candidate in computer science at the <a href="https://www.cs.umn.edu/">University of Minnesota</a>, advised by <a href="https://rsn.cs.utexas.edu/people.html">Volkan Isler</a>. I study how robots can find useful paths through cluttered spaces using trajectory sampling and model predictive control.</p>
+          <ul class="profile-links" aria-label="Profiles">
+            <li><a href="https://github.com/ogpoyrazoglu">GitHub</a></li>
+            <li><a href="https://www.linkedin.com/in/ogpoyrazoglu/">LinkedIn</a></li>
+            <li><a href="https://rsn.cs.utexas.edu/">RSN Lab</a></li>
+          </ul>
+        </div>
+        <div class="bio-photo">
+          <a href="assets/portrait.jpg" aria-label="View full-size portrait"><img src="assets/portrait.jpg" alt="O. Goktug Poyrazoglu" width="800" height="800" fetchpriority="high"></a>
+        </div>
+      </section>
 
-  <main class="story">
-    <section class="scene scene-welcome" data-side="center" aria-label="Welcome">
-      <p class="welcome-word"><span>Welcome</span><span>.</span></p>
-      <p class="lede">Thanks for stopping by.</p>
-      <a class="scroll-cue" href="#hello"><span class="cue-line" aria-hidden="true"></span>Scroll</a>
-    </section>
+      <section id="research" aria-labelledby="research-title">
+        <div class="section-header">
+          <h2 id="research-title">Research</h2>
+          <p>My recent work focuses on <a href="https://ogpoyrazoglu.github.io/cuniform_sampling/">trajectory sampling</a> for robot motion planning and control.</p>
+        </div>
+        <div class="papers">
+          <article class="paper">
+            <div class="paper-image"><img src="assets/uge-mpc.jpg" alt="" width="332" height="301"></div>
+            <div>
+              <p class="venue">ICRA 2026</p>
+              <h3><a href="https://arxiv.org/abs/2604.12149">Uncertainty Guided Exploratory Trajectory Optimization for Sampling-Based Model Predictive Control</a></h3>
+              <p class="authors"><strong>O. Goktug Poyrazoglu</strong>, Yukang Cao, Rahul Moorthy, Volkan Isler</p>
+              <p>Uses uncertainty along each trajectory to explore a more diverse set of paths in cluttered environments.</p>
+              <ul class="paper-links">
+                <li><a href="https://arxiv.org/abs/2604.12149">Paper</a></li>
+                <li><a href="https://ogpoyrazoglu.github.io/cuniform_sampling/">Project</a></li>
+                <li><a href="https://github.com/ogpoyrazoglu/cuniform_sampling">Code</a></li>
+              </ul>
+            </div>
+          </article>
+          <article class="paper">
+            <div class="paper-image"><img src="assets/c-free-uniform.png" alt="" width="810" height="744" loading="lazy"></div>
+            <div>
+              <p class="venue">ICRA 2026</p>
+              <h3><a href="https://arxiv.org/abs/2510.16905">C-Free-Uniform: A Map-Conditioned Trajectory Sampler for Model Predictive Path Integral Control</a></h3>
+              <p class="authors">Yukang Cao, Rahul Moorthy, <strong>O. Goktug Poyrazoglu</strong>, Volkan Isler</p>
+              <p>Uses the robot’s local map to sample collision-free configurations for predictive control.</p>
+              <ul class="paper-links">
+                <li><a href="https://arxiv.org/abs/2510.16905">Paper</a></li>
+                <li><a href="https://yukang-cao.github.io/C-Free-Uniform/">Project</a></li>
+              </ul>
+            </div>
+          </article>
+          <article class="paper">
+            <div class="paper-image"><img src="assets/neural-c-uniform.png" alt="" width="1800" height="1800" loading="lazy"></div>
+            <div>
+              <p class="venue">2025</p>
+              <h3><a href="https://arxiv.org/abs/2503.05819">An Unsupervised C-Uniform Trajectory Sampler with Applications to Model Predictive Path Integral Control</a></h3>
+              <p class="authors"><strong>O. Goktug Poyrazoglu</strong>, Rahul Moorthy, Yukang Cao, William Chastek, Volkan Isler</p>
+              <p>Learns to sample reachable configurations without discretizing the configuration space.</p>
+              <ul class="paper-links">
+                <li><a href="https://arxiv.org/abs/2503.05819">Paper</a></li>
+                <li><a href="https://rahulmoorthy19.github.io/cu_mppi/">Project</a></li>
+              </ul>
+            </div>
+          </article>
+          <article class="paper">
+            <div class="paper-image"><img src="assets/c-uniform.png" alt="" width="1171" height="1037" loading="lazy"></div>
+            <div>
+              <p class="venue">2024 preprint</p>
+              <h3><a href="https://arxiv.org/abs/2409.12266">C-Uniform Trajectory Sampling for Fast Motion Planning</a></h3>
+              <p class="authors"><strong>O. Goktug Poyrazoglu</strong>, Yukang Cao, Volkan Isler</p>
+              <p>Generates trajectories that sample uniformly over the robot’s reachable configurations at each time step.</p>
+              <ul class="paper-links">
+                <li><a href="https://arxiv.org/abs/2409.12266">Paper</a></li>
+                <li><a href="https://ogpoyrazoglu.github.io/cuniform_sampling/cuniform.html">Project</a></li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
 
-    <section class="scene beat" id="hello" data-side="right">
-      <div class="beat-text">
-        <h1><span>I’m</span> Goktug Poyrazoglu.</h1>
-        <p>On my papers, I’m O. Goktug Poyrazoglu.</p>
-      </div>
-    </section>
-
-    <section class="scene beat" data-side="left" aria-labelledby="about-title">
-      <div class="beat-text">
-        <h2 id="about-title" class="eyebrow">About me</h2>
-        <p class="big">I’m a Ph.D. candidate in computer science at the <a href="https://www.cs.umn.edu/">University of Minnesota</a>, advised by <a href="https://rsn.cs.utexas.edu/people.html">Volkan Isler</a>.</p>
-      </div>
-    </section>
-
-    <section class="scene beat" data-side="right">
-      <div class="beat-text">
-        <p class="big">I study how robots find useful paths through cluttered spaces.</p>
-      </div>
-    </section>
-
-    <section class="scene beat" data-side="left">
-      <div class="beat-text">
-        <p class="big">My tools are trajectory sampling and model predictive control.</p>
-      </div>
-    </section>
-
-    <section class="scene beat work" data-side="right" aria-labelledby="work-title" hidden>
-      <div class="beat-text">
-        <h2 id="work-title" class="eyebrow">Selected work</h2>
-        <ol id="selected-work"></ol>
-      </div>
-    </section>
-
-    <section class="scene scene-doors" data-side="center" aria-labelledby="doors-title">
-      <h2 id="doors-title">Where to next?</h2>
-      <div class="doors">
-        <span class="choice-arrow choice-left" aria-hidden="true">←</span>
-        <span class="choice-arrow choice-right" aria-hidden="true">→</span>
-        <a class="door door-lab" href="world.html" data-look="left">
-          <img src="assets/door-lab.jpg" alt="" width="2030" height="1215" loading="lazy">
-          <span class="door-kicker">Interactive 3D</span>
-          <span class="door-title">Robotics lab</span>
-          <span class="door-copy">Walk around my lab: the publications whiteboard, the BlueBoat, the Skydio F10, the F1TENTH racer, the AlphaTruck, and my blog.</span>
-          <span class="door-go">Enter the lab <span aria-hidden="true">→</span></span>
-        </a>
-        <a class="door door-classic" href="classic.html" data-look="right">
-          <img src="assets/door-classic.jpg" alt="" width="2160" height="1350" loading="lazy">
-          <span class="door-kicker">One page</span>
-          <span class="door-title">Classic website</span>
-          <span class="door-copy">Read my bio and selected publications, with links to papers, projects, and code.</span>
-          <span class="door-go">Open the classic site <span aria-hidden="true">→</span></span>
-        </a>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <img src="assets/ogp-mark.svg" width="56" height="30" alt="">
-    <span>O. Goktug Poyrazoglu</span>
-    <a href="blog.html">Blog</a>
-    <a href="https://github.com/ogpoyrazoglu">GitHub</a>
-    <a href="https://www.linkedin.com/in/ogpoyrazoglu/">LinkedIn</a>
-  </footer>
+    <footer class="site-footer">
+      <a href="https://github.com/jonbarron/jonbarron.github.io">Website template by Jon Barron</a>
+    </footer>
+  </div>
 </body>
 </html>
